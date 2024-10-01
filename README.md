@@ -1,7 +1,7 @@
 # onchain-video
 
-Convert video to fragmented mp4.
+Start local server:
 
 ```
-ffmpeg -i untitled.mp4 -movflags frag_keyframe+empty_moov+default_base_moof output_fragmented.mp4
+http://localhost:5000
 ```

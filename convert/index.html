@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video to Fragmented MP4 Converter</title>
+    <script src="/convert/ffmpeg.min.js"></script>
+    <script src="/convert/ffmpeg-core.js"></script>
+</head>
+<body>
+    <h1>Video to Fragmented MP4 Converter</h1>
+    <input type="file" id="videoInput" accept="video/*">
+    <button id="convertBtn">Convert to Fragmented MP4</button>
+    <div id="progress"></div>
+    <a id="downloadLink" style="display: none;">Download Fragmented MP4</a>
+
+    <script>
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: true });
+
+        let isFFmpegLoaded = false;
+
+        async function loadFFmpeg() {
+            if (!isFFmpegLoaded) {
+                await ffmpeg.load();
+                isFFmpegLoaded = true;
+            }
+        }
+
+        async function convertToFragmentedMP4(inputFile) {
+            await loadFFmpeg();
+
+            const inputFileName = 'input_video';
+            const outputFileName = 'output_fragmented.mp4';
+
+            ffmpeg.FS('writeFile', inputFileName, await fetchFile(inputFile));
+
+            await ffmpeg.run(
+                '-i', inputFileName,
+                '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
+                outputFileName
+            );
+
+            const data = ffmpeg.FS('readFile', outputFileName);
+            const blob = new Blob([data.buffer], { type: 'video/mp4' });
+            const url = URL.createObjectURL(blob);
+
+            const downloadLink = document.getElementById('downloadLink');
+            downloadLink.href = url;
+            downloadLink.download = 'fragmented_video.mp4';
+            downloadLink.style.display = 'inline';
+        }
+
+        document.getElementById('convertBtn').addEventListener('click', async () => {
+            const inputFile = document.getElementById('videoInput').files[0];
+            if (!inputFile) {
+                alert('Please select a video file');
+                return;
+            }
+
+            const progressElement = document.getElementById('progress');
+            progressElement.textContent = 'Converting...';
+
+            try {
+                await convertToFragmentedMP4(inputFile);
+                progressElement.textContent = 'Conversion complete!';
+            } catch (error) {
+                console.error('Conversion error:', error);
+                progressElement.textContent = 'Conversion failed. Please try again.';
+            }
+        });
+    </script>
+</body>
+</html>
