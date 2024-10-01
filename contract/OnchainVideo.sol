@@ -1,7 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract OnchainVideo {
+interface IBlast {
+    function configureAutomaticYield() external;
+    function configureClaimableGas() external;
+    function configureGovernor(address governor) external;
+}
+
+interface IBlastPoints {
+  function configurePointsOperator(address operator) external;
+}
+
+contract OnchainVideo is Ownable {
     struct VideoChunk {
         bytes data;
         address owner;
@@ -21,6 +33,21 @@ contract OnchainVideo {
 
     event PlaylistCreated(address indexed user, uint256 playlistIndex);
     event ChunkAdded(uint256 chunkId, address indexed owner, uint256 playlistIndex);
+
+    IBlast public constant BLAST = IBlast(0x4300000000000000000000000000000000000002);
+
+    constructor() Ownable(msg.sender) {
+        BLAST.configureAutomaticYield();
+        BLAST.configureClaimableGas();
+        // the governor is set, this contract will lose the ability to configure itself.
+        BLAST.configureGovernor(msg.sender);
+
+        // BlastPoints Testnet address: 0x2fc95838c71e76ec69ff817983BFf17c710F34E0
+        // BlastPoints Mainnet address: 0x2536FE9ab3F511540F2f9e2eC2A805005C3Dd800
+        IBlastPoints(0x2536FE9ab3F511540F2f9e2eC2A805005C3Dd800).configurePointsOperator(msg.sender);
+    }
+
+    receive() external payable {}
 
     function createPlaylist(string memory _filename, uint256 _duration, string memory _metadata) public returns (uint256) {
         PlaylistItem memory newPlaylist = PlaylistItem({
@@ -66,5 +93,20 @@ contract OnchainVideo {
 
     function getChunk(uint256 _chunkId) public view returns (bytes memory) {
         return chunks[_chunkId].data;
+    }
+
+    function withdrawETH() external onlyOwner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No ETH balance to withdraw");
+        (bool success, ) = msg.sender.call{value: balance}("");
+        require(success, "ETH transfer failed");
+    }
+
+    function withdrawToken(address _token) external onlyOwner {
+        require(_token != address(0), "Invalid token address");
+        IERC20 token = IERC20(_token);
+        uint256 balance = token.balanceOf(address(this));
+        require(balance > 0, "No token balance to withdraw");
+        require(token.transfer(msg.sender, balance), "Token transfer failed");
     }
 }
