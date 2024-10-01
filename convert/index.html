@@ -11,12 +11,23 @@
     <h1>Video to Fragmented MP4 Converter</h1>
     <input type="file" id="videoInput" accept="video/*">
     <button id="convertBtn">Convert to Fragmented MP4</button>
-    <div id="progress"></div>
+    <div id="progressContainer" style="display: none;">
+        <progress id="progressBar" value="0" max="100"></progress>
+        <span id="progressText">0%</span>
+    </div>
+    <div id="status"></div>
     <a id="downloadLink" style="display: none;">Download Fragmented MP4</a>
 
     <script>
         const { createFFmpeg, fetchFile } = FFmpeg;
-        const ffmpeg = createFFmpeg({ log: true });
+        const ffmpeg = createFFmpeg({ 
+            log: true,
+            progress: ({ ratio }) => {
+                const percent = (ratio * 100).toFixed(2);
+                document.getElementById('progressBar').value = percent;
+                document.getElementById('progressText').textContent = `${percent}%`;
+            }
+        });
 
         let isFFmpegLoaded = false;
 
@@ -58,15 +69,19 @@
                 return;
             }
 
-            const progressElement = document.getElementById('progress');
-            progressElement.textContent = 'Converting...';
+            const statusElement = document.getElementById('status');
+            const progressContainer = document.getElementById('progressContainer');
+            statusElement.textContent = 'Converting...';
+            progressContainer.style.display = 'block';
 
             try {
                 await convertToFragmentedMP4(inputFile);
-                progressElement.textContent = 'Conversion complete!';
+                statusElement.textContent = 'Conversion complete!';
             } catch (error) {
                 console.error('Conversion error:', error);
-                progressElement.textContent = 'Conversion failed. Please try again.';
+                statusElement.textContent = 'Conversion failed. Please try again.';
+            } finally {
+                progressContainer.style.display = 'none';
             }
         });
     </script>
