@@ -129,3 +129,8 @@ dist
 .yarn/install-state.gz
 .pnp.*
 package-lock.json
+video_segments/
+video_segments_bunny/
+video_segments_onchain/
+video_segments_onchain_2/
+output_fragmented.mp4
