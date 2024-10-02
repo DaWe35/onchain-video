@@ -171,7 +171,7 @@
                 const videoId = (videoCount - BigInt(1)).toString();
                 console.log("Video ID:", videoId);
                 
-                statusElement.textContent = `Onchain video created. Starting chunk uploads...`;
+                statusElement.textContent = `Onchain video created. Starting chunk uploads... (make sure gas limit is just below 30M, eg. 29700000)`;
                 uploadChunksBatch(videoId);
             } catch (error) {
                 console.error('Failed to create onchain video:', error);
@@ -191,7 +191,6 @@
                         gasLimit: 29700000
                     });
                     statusElement.textContent = `Uploading chunk ${i + 1}/${chunkCount}... Transaction sent.`;
-                    await tx.wait();
                     uploadedChunks++;
                     updateUploadButton();
                 } catch (error) {
