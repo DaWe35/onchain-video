@@ -142,7 +142,12 @@
                 createVideoBtn.style.display = 'none';
                 statusElement.textContent = 'Creating onchain video... Please wait for confirmation.';
                 
-                const tx = await contract.createOnchainVideo(inputFile.name, 0, "{}");
+                // Create metadata object with codec information
+                const metadata = {
+                    codec: 'video/mp4; codecs="avc1.64002A, mp4a.40.5"'
+                };
+                
+                const tx = await contract.createOnchainVideo(inputFile.name, 0, JSON.stringify(metadata));
                 await tx.wait();
                 
                 const address = await signer.getAddress();
@@ -246,7 +251,17 @@
                 const inputFileName = 'input_video';
                 const outputFileName = 'output_fragmented.mp4';
                 ffmpeg.FS('writeFile', inputFileName, await fetchFile(inputFile));
-                await ffmpeg.run('-i', inputFileName, '-movflags', 'frag_keyframe+empty_moov+default_base_moof', outputFileName);
+                await ffmpeg.run(
+                    '-i', inputFileName,
+                    '-f', 'lavfi',
+                    '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
+                    '-c:v', 'libx264', '-profile:v', 'main', '-level:v', '4.2',
+                    '-c:a', 'aac', '-b:a', '128k',
+                    '-shortest',
+                    '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
+                    '-f', 'mp4',
+                    outputFileName
+                );
                 const data = ffmpeg.FS('readFile', outputFileName);
                 convertedVideo = new Uint8Array(data.buffer);
                 chunkCount = Math.ceil(convertedVideo.length / CHUNK_SIZE);

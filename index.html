@@ -65,8 +65,14 @@
             mediaSource.addEventListener('sourceopen', sourceOpen);
         }
 
-        function sourceOpen() {
-            const mimeCodec = 'video/mp4; codecs="avc1.640028, mp4a.40.2"';
+        async function sourceOpen() {
+            // Fetch video metadata from the contract
+            const videoDetails = await contract.getVideo(videoId);
+            const metadata = JSON.parse(videoDetails.metadata || '{}');
+            
+            // Use the codec from metadata, or fall back to a default if not available
+            const mimeCodec = metadata.codec || 'video/mp4; codecs="avc1.64002A, mp4a.40.5"';
+            
             if (!MediaSource.isTypeSupported(mimeCodec)) {
                 console.error('Unsupported MIME type or codec: ', mimeCodec);
                 return;

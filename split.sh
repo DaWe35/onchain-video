@@ -18,6 +18,20 @@ fi
 
 # Create a directory to store the segments
 output_dir="video_segments"
+
+# Check if the output directory already exists
+if [ -d "$output_dir" ]; then
+    read -p "The '$output_dir' folder already exists. Do you want to empty it? (y/n) " -n 1 -r
+    echo    # Move to a new line
+    if [[ $REPLY =~ ^[Yy]$ ]]
+    then
+        rm -rf "$output_dir"/*
+        echo "The '$output_dir' folder has been emptied."
+    else
+        echo "Operation cancelled. The existing segments will be overwritten."
+    fi
+fi
+
 mkdir -p "$output_dir"
 
 # Split the video file into 40KB segments
