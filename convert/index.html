@@ -3,15 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video to Fragmented MP4 Converter and Uploader</title>
+    <title>Onchain Video Uploader</title>
     <script src="/convert/ffmpeg.min.js"></script>
     <script src="/convert/ffmpeg-core.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js" integrity="sha512-f+t6//rz3Iy3hp1CiwtsigYtyWuGk7bf6xl2RTOPvmyMIfTQJ4iy6Lg1dah1bsLQ9SLideJGicgmOkBsBXP1aA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
-    <h1>Video to Fragmented MP4 Converter and Uploader</h1>
+    <h1>Onchain Video Uploader</h1>
     <div id="fileInputContainer">
+        <p>Select a video file to upload:</p>
         <input type="file" id="videoInput" accept="video/*">
+        <p>🛈 Start with a really small file - 1MB video will fill ~25 entire blocks and ask you to sign 25 times.</p>
+        <p>🛈 If you have gas issues, try to set the gas limit manually to 29700000.</p>
+    </div>
+    <div id="resolutionSelector" style="display: none;">
+        <p>Select the desired video height:</p>
+        <select id="resolutionSelect">
+            <option value="90">90p</option>
+            <option value="144">144p</option>
+            <option value="240">240p</option>
+            <option value="360">360p</option>
+            <option value="480">480p</option>
+            <option value="720">720p</option>
+            <option value="1080">1080p</option>
+        </select>
+        <button id="convertBtn">Convert</button>
     </div>
     <div id="selectedFileInfo" style="display: none;"></div>
     <div id="progressContainer" style="display: none;">
@@ -239,10 +255,12 @@
             const progressContainer = document.getElementById('progressContainer');
             const fileInputContainer = document.getElementById('fileInputContainer');
             const selectedFileInfo = document.getElementById('selectedFileInfo');
+            const resolutionSelector = document.getElementById('resolutionSelector');
             
             statusElement.textContent = 'Converting...';
             progressContainer.style.display = 'block';
             fileInputContainer.style.display = 'none';
+            resolutionSelector.style.display = 'none';
             selectedFileInfo.textContent = `Selected file: ${inputFile.name}`;
             selectedFileInfo.style.display = 'block';
 
@@ -251,11 +269,15 @@
                 const inputFileName = 'input_video';
                 const outputFileName = 'output_fragmented.mp4';
                 ffmpeg.FS('writeFile', inputFileName, await fetchFile(inputFile));
+
+                const height = document.getElementById('resolutionSelect').value;
+
                 await ffmpeg.run(
                     '-i', inputFileName,
                     '-f', 'lavfi',
                     '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
                     '-c:v', 'libx264', '-profile:v', 'main', '-level:v', '4.2',
+                    '-vf', `scale=-2:${height}`,
                     '-c:a', 'aac', '-b:a', '128k',
                     '-shortest',
                     '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
@@ -266,11 +288,16 @@
                 convertedVideo = new Uint8Array(data.buffer);
                 chunkCount = Math.ceil(convertedVideo.length / CHUNK_SIZE);
                 document.getElementById('connectWalletBtn').style.display = 'inline';
-                statusElement.textContent = `Conversion complete! ${chunkCount + 1} transactions will be required (1 for video creation, ${chunkCount} for chunks). Please connect your wallet to continue.`;
+                
+                const convertedSizeInMB = (convertedVideo.length / (1024 * 1024)).toFixed(2);
+                statusElement.innerHTML = `<br>Conversion complete!<br>
+                    ${chunkCount + 1} transactions will be required to upload ${convertedSizeInMB} MB to the blockchain 😲<br><br>
+                    Please connect your wallet to continue.`;
             } catch (error) {
                 console.error('Conversion error:', error);
                 statusElement.textContent = 'Conversion failed. Please try again.';
                 fileInputContainer.style.display = 'block';
+                resolutionSelector.style.display = 'none';
                 selectedFileInfo.style.display = 'none';
             } finally {
                 progressContainer.style.display = 'none';
@@ -280,6 +307,16 @@
         // Event listeners
         document.getElementById('videoInput').addEventListener('change', async (event) => {
             const inputFile = event.target.files[0];
+            if (inputFile) {
+                document.getElementById('fileInputContainer').style.display = 'none';
+                document.getElementById('resolutionSelector').style.display = 'block';
+                document.getElementById('selectedFileInfo').textContent = `Selected file: ${inputFile.name}`;
+                document.getElementById('selectedFileInfo').style.display = 'block';
+            }
+        });
+
+        document.getElementById('convertBtn').addEventListener('click', async () => {
+            const inputFile = document.getElementById('videoInput').files[0];
             if (inputFile) {
                 await convertToFragmentedMP4(inputFile);
             }
