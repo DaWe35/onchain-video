@@ -51,7 +51,7 @@
                 String.fromCharCode(97 + Math.floor(currentSegment / 26 / 26) % 26) +
                 String.fromCharCode(97 + Math.floor(currentSegment / 26) % 26) +
                 String.fromCharCode(97 + (currentSegment % 26));
-            const url = `/video_segments/${segmentName}`;
+            const url = `/video_segments_onchain_2/${segmentName}`;
 
             try {
                 const response = await fetch(url);
