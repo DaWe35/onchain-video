@@ -1,5 +1,32 @@
 [
 	{
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "OwnableInvalidOwner",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "OwnableUnauthorizedAccount",
+		"type": "error"
+	},
+	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -17,11 +44,30 @@
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "playlistIndex",
+				"name": "videoId",
 				"type": "uint256"
 			}
 		],
-		"name": "ChunkAdded",
+		"name": "ChunkUploaded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "previousOwner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "OwnershipTransferred",
 		"type": "event"
 	},
 	{
@@ -36,35 +82,24 @@
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "playlistIndex",
+				"name": "videoId",
 				"type": "uint256"
 			}
 		],
-		"name": "PlaylistCreated",
+		"name": "VideoCreated",
 		"type": "event"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "bytes",
-				"name": "_data",
-				"type": "bytes"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_playlistIndex",
-				"type": "uint256"
-			}
-		],
-		"name": "addChunk",
+		"inputs": [],
+		"name": "BLAST",
 		"outputs": [
 			{
-				"internalType": "uint256",
+				"internalType": "contract IBlast",
 				"name": "",
-				"type": "uint256"
+				"type": "address"
 			}
 		],
-		"stateMutability": "nonpayable",
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -109,7 +144,7 @@
 				"type": "string"
 			}
 		],
-		"name": "createPlaylist",
+		"name": "createOnchainVideo",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -142,17 +177,12 @@
 	{
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "_user",
-				"type": "address"
-			},
-			{
 				"internalType": "uint256",
-				"name": "_playlistIndex",
+				"name": "_videoId",
 				"type": "uint256"
 			}
 		],
-		"name": "getPlaylist",
+		"name": "getVideo",
 		"outputs": [
 			{
 				"internalType": "string",
@@ -173,6 +203,11 @@
 				"internalType": "uint256[]",
 				"name": "chunkIds",
 				"type": "uint256[]"
+			},
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -186,12 +221,31 @@
 				"type": "address"
 			}
 		],
-		"name": "getPlaylistCount",
+		"name": "getVideoCount",
 		"outputs": [
 			{
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_user",
+				"type": "address"
+			}
+		],
+		"name": "getVideoIds",
+		"outputs": [
+			{
+				"internalType": "uint256[]",
+				"name": "",
+				"type": "uint256[]"
 			}
 		],
 		"stateMutability": "view",
@@ -211,6 +265,76 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "nextVideoId",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "owner",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "renounceOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes",
+				"name": "_data",
+				"type": "bytes"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_videoId",
+				"type": "uint256"
+			}
+		],
+		"name": "uploadChunk",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -223,7 +347,26 @@
 				"type": "uint256"
 			}
 		],
-		"name": "userPlaylists",
+		"name": "userVideoIds",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "videos",
 		"outputs": [
 			{
 				"internalType": "string",
@@ -239,9 +382,38 @@
 				"internalType": "string",
 				"name": "metadata",
 				"type": "string"
+			},
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",
 		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "withdrawETH",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_token",
+				"type": "address"
+			}
+		],
+		"name": "withdrawToken",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"stateMutability": "payable",
+		"type": "receive"
 	}
 ]

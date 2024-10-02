@@ -19,20 +19,24 @@ contract OnchainVideo is Ownable {
         address owner;
     }
 
-    struct PlaylistItem {
+    struct Video {
         string filename;
-        uint256 duration;  // Changed from length to duration
+        uint256 duration;
         string metadata;
         uint256[] chunkIds;
+        address owner;
     }
 
     mapping(uint256 => VideoChunk) public chunks;
     uint256 public nextChunkId;
 
-    mapping(address => PlaylistItem[]) public userPlaylists;
+    mapping(uint256 => Video) public videos;
+    uint256 public nextVideoId;
 
-    event PlaylistCreated(address indexed user, uint256 playlistIndex);
-    event ChunkAdded(uint256 chunkId, address indexed owner, uint256 playlistIndex);
+    mapping(address => uint256[]) public userVideoIds;
+
+    event VideoCreated(address indexed user, uint256 videoId);
+    event ChunkUploaded(uint256 chunkId, address indexed owner, uint256 videoId);
 
     IBlast public constant BLAST = IBlast(0x4300000000000000000000000000000000000002);
 
@@ -49,46 +53,50 @@ contract OnchainVideo is Ownable {
 
     receive() external payable {}
 
-    function createPlaylist(string memory _filename, uint256 _duration, string memory _metadata) public returns (uint256) {
-        PlaylistItem memory newPlaylist = PlaylistItem({
-            filename: _filename,
-            duration: _duration,  // Changed from length to duration
-            metadata: _metadata,
-            chunkIds: new uint256[](0)
-        });
+    function createOnchainVideo(string memory _filename, uint256 _duration, string memory _metadata) public returns (uint256) {
+        uint256 videoId = nextVideoId++;
+        Video storage newVideo = videos[videoId];
+        newVideo.filename = _filename;
+        newVideo.duration = _duration;
+        newVideo.metadata = _metadata;
+        newVideo.owner = msg.sender;
 
-        userPlaylists[msg.sender].push(newPlaylist);
-        uint256 newPlaylistIndex = userPlaylists[msg.sender].length - 1;
+        userVideoIds[msg.sender].push(videoId);
         
-        emit PlaylistCreated(msg.sender, newPlaylistIndex);
-        return newPlaylistIndex;
+        emit VideoCreated(msg.sender, videoId);
+        return videoId;
     }
 
-    function addChunk(bytes memory _data, uint256 _playlistIndex) public returns (uint256) {
-        require(_playlistIndex < userPlaylists[msg.sender].length, "Playlist does not exist");
+    function uploadChunk(bytes memory _data, uint256 _videoId) public returns (uint256) {
+        require(videos[_videoId].owner == msg.sender, "Not the video owner");
 
         uint256 chunkId = nextChunkId++;
         chunks[chunkId] = VideoChunk(_data, msg.sender);
 
-        userPlaylists[msg.sender][_playlistIndex].chunkIds.push(chunkId);
+        videos[_videoId].chunkIds.push(chunkId);
 
-        emit ChunkAdded(chunkId, msg.sender, _playlistIndex);
+        emit ChunkUploaded(chunkId, msg.sender, _videoId);
         return chunkId;
     }
 
-    function getPlaylistCount(address _user) public view returns (uint256) {
-        return userPlaylists[_user].length;
+    function getVideoCount(address _user) public view returns (uint256) {
+        return userVideoIds[_user].length;
     }
 
-    function getPlaylist(address _user, uint256 _playlistIndex) public view returns (
+    function getVideoIds(address _user) public view returns (uint256[] memory) {
+        return userVideoIds[_user];
+    }
+
+    function getVideo(uint256 _videoId) public view returns (
         string memory filename,
-        uint256 duration,  // Changed from length to duration
+        uint256 duration,
         string memory metadata,
-        uint256[] memory chunkIds
+        uint256[] memory chunkIds,
+        address owner
     ) {
-        require(_playlistIndex < userPlaylists[_user].length, "Playlist does not exist");
-        PlaylistItem storage playlist = userPlaylists[_user][_playlistIndex];
-        return (playlist.filename, playlist.duration, playlist.metadata, playlist.chunkIds);
+        Video storage video = videos[_videoId];
+        require(video.owner != address(0), "Video does not exist");
+        return (video.filename, video.duration, video.metadata, video.chunkIds, video.owner);
     }
 
     function getChunk(uint256 _chunkId) public view returns (bytes memory) {

@@ -1,3 +1,5 @@
+<!--    This page is useful for testing the video player with local video segments -->
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -8,8 +10,6 @@
         <p>MBs downloaded: <span id="mbsDownloaded">0.00</span> MB</p>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js" integrity="sha512-f+t6//rz3Iy3hp1CiwtsigYtyWuGk7bf6xl2RTOPvmyMIfTQJ4iy6Lg1dah1bsLQ9SLideJGicgmOkBsBXP1aA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
     <script>
         let mediaSource;
         let sourceBuffer;
@@ -18,43 +18,9 @@
         const delay = 200; // Delay between segments in milliseconds
         let totalBytesDownloaded = 0;
         let chunksDownloaded = 0;
-        let contract;
-        let videoId;
-        let totalChunks;
 
         async function loadVideo() {
-            // Get video ID from URL
-            const urlParams = new URLSearchParams(window.location.search);
-            videoId = urlParams.get('video');
-            if (!videoId) {
-                console.error('No video ID provided in the URL');
-                return;
-            }
-
-            // Initialize contract
-            await initializeContract();
-
-            // Get video details
-            const videoDetails = await contract.getVideo(videoId);
-            totalChunks = videoDetails.chunkIds.length;
-
             setupMediaSource();
-        }
-
-        async function initializeContract() {
-            // Load ABI and contract address
-            const response = await fetch('contract/abi.json');
-            const abi = await response.json();
-            const contractAddress = '0xe9b1324f531a4603eb5d1a739e4ee25a5c824890';
-
-            // Connect to Ethereum provider (e.g., MetaMask)
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
-
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const signer = await provider.getSigner();
-
-            // Create contract instance
-            contract = new ethers.Contract(contractAddress, abi, signer);
         }
 
         function setupMediaSource() {
@@ -81,22 +47,23 @@
         }
 
         async function loadNextSegment() {
-            if (currentSegment >= totalChunks) {
-                mediaSource.endOfStream();
-                return;
-            }
+            const segmentName = segmentPrefix + String.fromCharCode(97 + Math.floor(currentSegment / 26 / 26 / 26)) +
+                String.fromCharCode(97 + Math.floor(currentSegment / 26 / 26) % 26) +
+                String.fromCharCode(97 + Math.floor(currentSegment / 26) % 26) +
+                String.fromCharCode(97 + (currentSegment % 26));
+            const url = `/video_segments_onchain/${segmentName}`;
 
             try {
-                // Fetch chunk from the blockchain
-                const chunkData = await contract.getChunk(currentSegment);
-
-                // Convert hex string to ArrayBuffer
-                const segmentBuffer = hexToArrayBuffer(chunkData);
+                const response = await fetch(url);
+                if (!response.ok) {
+                    mediaSource.endOfStream();
+                    return;
+                }
+                const segmentBuffer = await response.arrayBuffer();
 
                 // Check if sourceBuffer is too big
                 await waitForSourceBuffer();
-                console.log('Appending segment:', currentSegment);
-                console.log(segmentBuffer);
+
                 sourceBuffer.appendBuffer(segmentBuffer);
                 currentSegment++;
 
@@ -113,11 +80,6 @@
                 console.error('Error loading segment:', error);
                 mediaSource.endOfStream();
             }
-        }
-
-        function hexToArrayBuffer(hexString) {
-            const bytes = new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-            return bytes.buffer;
         }
 
         function waitForSourceBuffer() {
