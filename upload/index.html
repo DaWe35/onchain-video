@@ -58,6 +58,7 @@
         const contractAddress = "0xe9b1324f531a4603eb5d1a739e4ee25a5c824890";
         const CHUNK_SIZE = 40 * 1024; // 40 KB
         let provider, signer, contract;
+        let currentChainId;
         let convertedVideo, chunkCount, uploadedChunks = 0;
         let contractABI, isABILoaded = false, isFFmpegLoaded = false;
 
@@ -116,13 +117,23 @@
                     await window.ethereum.request({ method: 'eth_requestAccounts' });
                     provider = new ethers.BrowserProvider(window.ethereum);
                     signer = await provider.getSigner();
-                    contract = new ethers.Contract(contractAddress, contractABI, signer);
+                    
+                    // Get the current chain ID
+                    const network = await provider.getNetwork();
+                    currentChainId = network.chainId;
+
+                    // Initialize the contract
+                    initializeContract();
+
                     document.getElementById('connectWalletBtn').style.display = 'none';
                     checkNetwork();
                     console.log("Contract initialized:", isContractInitialized());
                     console.log("Available contract methods:", Object.keys(contract));
                     walletStatus.textContent = 'Wallet connected successfully!';
                     setTimeout(() => { walletStatus.style.display = 'none'; }, 3000);
+
+                    // Add event listener for network changes
+                    window.ethereum.on('chainChanged', handleChainChanged);
                 } catch (error) {
                     console.error('Failed to connect wallet:', error);
                     walletStatus.textContent = error.message || 'Failed to connect wallet. Please try again.';
@@ -132,11 +143,24 @@
             }
         }
 
+        function initializeContract() {
+            contract = new ethers.Contract(contractAddress, contractABI, signer);
+        }
+
+        function handleChainChanged(chainId) {
+            console.log('Network changed to:', chainId);
+            currentChainId = chainId;
+            // Reload the page to ensure all states are reset
+            window.location.reload();
+        }
+
         async function checkNetwork() {
             const network = await provider.getNetwork();
-            if (network.name !== 'blast-sepolia') {
+            if (network.chainId.toString(16) !== 'a0c71fd') { // Blast Sepolia chain ID
                 document.getElementById('switchNetworkBtn').style.display = 'inline';
+                document.getElementById('createVideoBtn').style.display = 'none';
             } else {
+                document.getElementById('switchNetworkBtn').style.display = 'none';
                 document.getElementById('createVideoBtn').style.display = 'inline';
             }
         }
@@ -197,6 +221,12 @@
                 if (!isContractInitialized()) {
                     throw new Error("Contract is not initialized. Please connect your wallet first.");
                 }
+                
+                // Check if we're still on the correct network
+                if (currentChainId.toString(16) !== 'a0c71fd') {
+                    throw new Error("Please switch to the Blast Sepolia network before creating a video.");
+                }
+
                 createVideoBtn.style.display = 'none';
                 statusElement.textContent = 'Creating onchain video... Please wait for confirmation.';
                 
@@ -209,8 +239,8 @@
                 await tx.wait();
                 
                 const address = await signer.getAddress();
-                const videoCount = await contract.getVideoCount(address);
-                const videoId = (videoCount - BigInt(1)).toString();
+                const videoIds = await contract.getVideoIds(address);
+                const videoId = videoIds[videoIds.length - 1].toString();
                 console.log("Video ID:", videoId);
                 
                 statusElement.textContent = `Onchain video created. Starting chunk uploads... (make sure gas limit is just below 30M, eg. 29700000)`;
