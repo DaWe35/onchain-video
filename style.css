@@ -10,7 +10,7 @@ body {
     color: var(--text-color);
     font-family: Arial, sans-serif;
     line-height: 1.6;
-    padding: 20px;
+    padding: 40px;
     transition: background-color 0.3s, color 0.3s;
 }
 
