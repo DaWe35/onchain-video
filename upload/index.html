@@ -16,7 +16,6 @@
         <button id="connectWalletBtn">Connect Wallet</button>
         <button id="switchNetworkBtn" style="display: none;">Switch to Blast Sepolia</button>
     </div>
-    <div id="walletStatus" style="display: none;">Connecting wallet...</div>
     <div id="fileInputContainer" style="display: none;">
         <p>
             Select a video file to upload:
@@ -43,6 +42,7 @@
         </select>
         <button id="convertBtn">Convert</button>
     </div>
+    <div id="walletStatus" style="display: none;">Connecting wallet...</div>
     <div id="selectedFileInfo" style="display: none;"></div>
     <div id="progressContainer" style="display: none;">
         <progress id="progressBar" value="0" max="100"></progress>
@@ -132,9 +132,6 @@
                     walletStatus.textContent = 'Wallet connected successfully!';
                     setTimeout(() => { 
                         walletStatus.style.display = 'none';
-                        if (currentChainId.toString(16) === 'a0c71fd') {
-                            showFileInput();
-                        }
                     }, 3000);
 
                     window.ethereum.on('chainChanged', handleChainChanged);
