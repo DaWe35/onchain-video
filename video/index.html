@@ -37,7 +37,7 @@
                 return;
             }
 
-            // Check and switch to Blast Sepolia network
+            // Check and switch to Blast network
             await checkAndSwitchNetwork();
 
             // Initialize contract
@@ -69,24 +69,24 @@
                                 method: 'wallet_addEthereumChain',
                                 params: [{
                                     chainId: CHAIN_ID,
-                                    chainName: 'Blast Sepolia',
+                                    chainName: 'Blast',
                                     nativeCurrency: {
                                         name: 'Ether',
                                         symbol: 'ETH',
                                         decimals: 18
                                     },
-                                    rpcUrls: ['https://sepolia.blast.io'],
-                                    blockExplorerUrls: ['https://testnet.blastscan.io']
+                                    rpcUrls: ['https://rpc.blast.io'],
+                                    blockExplorerUrls: ['https://blastscan.io']
                                 }],
                             });
                         } catch (addError) {
-                            console.error('Failed to add Blast Sepolia network', addError);
-                            alert('Please add the Blast Sepolia network to your wallet and switch to it.');
+                            console.error('Failed to add Blast network', addError);
+                            alert('Please add the Blast network to your wallet and switch to it.');
                             return;
                         }
                     } else {
-                        console.error('Failed to switch to Blast Sepolia network', switchError);
-                        alert('Please switch to the Blast Sepolia network in your wallet.');
+                        console.error('Failed to switch to Blast network', switchError);
+                        alert('Please switch to the Blast network in your wallet.');
                         return;
                     }
                 }
@@ -111,7 +111,7 @@
             // Add event listener for network changes
             window.ethereum.on('chainChanged', (chainId) => {
                 if (chainId !== CHAIN_ID) {
-                    alert('Please switch back to the Blast Sepolia network to use this application.');
+                    alert('Please switch back to the Blast network to use this application.');
                     location.reload();
                 }
             });

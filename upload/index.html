@@ -14,7 +14,7 @@
     <h1><a href="/">Onchain Video</a> Uploader</h1>
     <div id="walletConnection">
         <button id="connectWalletBtn">Connect Wallet</button>
-        <button id="switchNetworkBtn" style="display: none;">Switch to Blast Sepolia</button>
+        <button id="switchNetworkBtn" style="display: none;">Switch to Blast</button>
     </div>
     <div id="fileInputContainer" style="display: none;">
         <p>
@@ -167,14 +167,14 @@
                             method: 'wallet_addEthereumChain',
                             params: [{
                                 chainId: '0x13e31',
-                                chainName: 'Blast Sepolia',
+                                chainName: 'Blast',
                                 nativeCurrency: {
                                     name: 'Ethereum',
                                     symbol: 'ETH',
                                     decimals: 18
                                 },
-                                rpcUrls: ['https://sepolia.blast.io'],
-                                blockExplorerUrls: ['https://testnet.blastscan.io']
+                                rpcUrls: ['https://rpc.blast.io'],
+                                blockExplorerUrls: ['https://blastscan.io']
                             }]
                         });
                         await window.ethereum.request({
@@ -182,8 +182,8 @@
                             params: [{ chainId: '0x13e31' }],
                         });
                     } catch (addError) {
-                        console.error('Failed to add Blast Sepolia network:', addError);
-                        document.getElementById('status').textContent = 'Failed to add Blast Sepolia network. Please add it manually in MetaMask.';
+                        console.error('Failed to add Blast network:', addError);
+                        document.getElementById('status').textContent = 'Failed to add Blast network. Please add it manually in MetaMask.';
                         return;
                     }
                 } else {
@@ -224,7 +224,7 @@
                 
                 // Check if we're still on the correct network
                 if (currentChainId.toString(16) !== '13e31') {
-                    throw new Error("Please switch to the Blast Sepolia network before creating a video.");
+                    throw new Error("Please switch to the Blast network before creating a video.");
                 }
 
                 createVideoBtn.style.display = 'none';
