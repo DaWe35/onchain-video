@@ -25,7 +25,7 @@
         let contract;
         let videoId;
 
-        const BLAST_SEPOLIA_CHAIN_ID = '168587773'; // Blast Sepolia chain ID
+        const CHAIN_ID = '0xa0c71fd'; // Blast Sepolia chain ID
 
         async function loadVideo() {
             // Get video ID from URL
@@ -54,11 +54,11 @@
 
         async function checkAndSwitchNetwork() {
             const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-            if (chainId !== BLAST_SEPOLIA_CHAIN_ID) {
+            if (chainId !== CHAIN_ID) {
                 try {
                     await window.ethereum.request({
                         method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: BLAST_SEPOLIA_CHAIN_ID }],
+                        params: [{ chainId: CHAIN_ID }],
                     });
                 } catch (switchError) {
                     // This error code indicates that the chain has not been added to MetaMask
@@ -67,7 +67,7 @@
                             await window.ethereum.request({
                                 method: 'wallet_addEthereumChain',
                                 params: [{
-                                    chainId: BLAST_SEPOLIA_CHAIN_ID,
+                                    chainId: CHAIN_ID,
                                     chainName: 'Blast Sepolia',
                                     nativeCurrency: {
                                         name: 'Ether',
@@ -109,7 +109,7 @@
 
             // Add event listener for network changes
             window.ethereum.on('chainChanged', (chainId) => {
-                if (chainId !== BLAST_SEPOLIA_CHAIN_ID) {
+                if (chainId !== CHAIN_ID) {
                     alert('Please switch back to the Blast Sepolia network to use this application.');
                     location.reload();
                 }
