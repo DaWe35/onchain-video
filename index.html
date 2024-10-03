@@ -1,174 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onchain Video</title>
+    <!-- Add this line to include the FontAwesome CSS file -->
+    <link rel="stylesheet" href="/fontawesome-free-6.6.0-web/css/all.min.css">
+    <link rel="stylesheet" href="/style.css">
 
+
+</head>
 <body>
-    <h1>Onchain Video Player</h1>
-    <p><span id="fileName">Loading...</span></p>
+    <h1>Onchain Video</h1>
+    <p>Upload and watch videos on the Blast blockchain.</p>
+    <p>
+        <a href="/upload">Upload</a>
+    </p>
 
-    <video id="videoPlayer" controls style="max-width: 400px;"></video>
-    <div id="stats">
-        <p><span id="mbsDownloaded">0.00</span> MB downloaded from <span id="chunksDownloaded">0</span> blockchain transactions.</p>
-    </div>
+    <p>
+        <a href="/video?v=2">Watch example video</a>
+    </p>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js" integrity="sha512-f+t6//rz3Iy3hp1CiwtsigYtyWuGk7bf6xl2RTOPvmyMIfTQJ4iy6Lg1dah1bsLQ9SLideJGicgmOkBsBXP1aA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <p>
+        Social bs: 
+        <a href="https://github.com/DaWe35/onchain-video" rel="noopener noreferrer">
+            <i class="fab fa-twitter"></i> Xwitter
+        </a>
+        <a href="https://github.com/DaWe35/onchain-video" rel="noopener noreferrer">
+            <i class="fab fa-github"></i> GutHib
+        </a>
+    </p>
 
-    <script>
-        let mediaSource;
-        let sourceBuffer;
-        let chunkIds = []; // Array to store chunk IDs
-        let currentChunkIndex = 0;
-        const delay = 200; // Delay between segments in milliseconds
-        let totalBytesDownloaded = 0;
-        let chunksDownloaded = 0;
-        let contract;
-        let videoId;
-
-        async function loadVideo() {
-            // Get video ID from URL
-            const urlParams = new URLSearchParams(window.location.search);
-            videoId = urlParams.get('video');
-            if (!videoId) {
-                console.error('No video ID provided in the URL');
-                return;
-            }
-
-            // Initialize contract
-            await initializeContract();
-
-            // Get video details
-            const videoDetails = await contract.getVideo(videoId);
-            chunkIds = videoDetails.chunkIds;
-
-            // Update file name in stats
-            document.getElementById('fileName').textContent = videoDetails.filename || 'Unknown';
-
-            setupMediaSource();
-        }
-
-        async function initializeContract() {
-            // Load ABI and contract address
-            const response = await fetch('contract/abi.json');
-            const abi = await response.json();
-            const contractAddress = '0xe9b1324f531a4603eb5d1a739e4ee25a5c824890';
-
-            // Connect to Ethereum provider (e.g., MetaMask)
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
-
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const signer = await provider.getSigner();
-
-            // Create contract instance
-            contract = new ethers.Contract(contractAddress, abi, signer);
-        }
-
-        function setupMediaSource() {
-            const video = document.getElementById('videoPlayer');
-            mediaSource = new MediaSource();
-            video.src = URL.createObjectURL(mediaSource);
-
-            mediaSource.addEventListener('sourceopen', sourceOpen);
-        }
-
-        async function sourceOpen() {
-            // Fetch video metadata from the contract
-            const videoDetails = await contract.getVideo(videoId);
-            const metadata = JSON.parse(videoDetails.metadata || '{}');
-            
-            // Use the codec from metadata, or fall back to a default if not available
-            const mimeCodec = metadata.codec || 'video/mp4; codecs="avc1.64002A, mp4a.40.5"';
-            
-            if (!MediaSource.isTypeSupported(mimeCodec)) {
-                console.error('Unsupported MIME type or codec: ', mimeCodec);
-                return;
-            }
-
-            try {
-                sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);
-                loadNextSegment();
-            } catch (e) {
-                console.error('Exception while adding source buffer', e);
-            }
-        }
-
-        async function loadNextSegment() {
-            if (currentChunkIndex >= chunkIds.length) {
-                mediaSource.endOfStream();
-                return;
-            }
-
-            try {
-                // Fetch chunk from the blockchain using the current chunk ID
-                const chunkData = await contract.getChunk(chunkIds[currentChunkIndex]);
-
-                // Convert hex string to ArrayBuffer
-                const segmentBuffer = hexToArrayBuffer(chunkData);
-
-                // Check if sourceBuffer is too big
-                await waitForSourceBuffer();
-                sourceBuffer.appendBuffer(segmentBuffer);
-                currentChunkIndex++;
-
-                // Update stats
-                chunksDownloaded++;
-                totalBytesDownloaded += segmentBuffer.byteLength;
-                updateStats();
-
-                // Wait for the segment to be processed before loading the next one
-                sourceBuffer.addEventListener('updateend', () => {
-                    setTimeout(loadNextSegment, delay);
-                }, { once: true });
-            } catch (error) {
-                console.error('Error loading segment:', error);
-                mediaSource.endOfStream();
-            }
-        }
-
-        function hexToArrayBuffer(hexString) {
-            // Remove '0x' prefix if present
-            const cleanHexString = hexString.startsWith('0x') ? hexString.slice(2) : hexString;
-            const bytes = new Uint8Array(cleanHexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-            return bytes.buffer;
-        }
-
-        function waitForSourceBuffer() {
-            return new Promise((resolve) => {
-                const checkBuffer = () => {
-                    const sizeThreshold = 10 * 1024 * 1024; // 50 MB
-
-                    if (sourceBuffer.buffered.length > 0) {
-                        const bufferEnd = sourceBuffer.buffered.end(sourceBuffer.buffered.length - 1);
-                        
-                        // Estimate buffer size (this is an approximation)
-                        const estimatedBufferSize = totalBytesDownloaded - (document.getElementById('videoPlayer').currentTime * (totalBytesDownloaded / bufferEnd));
-
-                        if (estimatedBufferSize < sizeThreshold) {
-                            resolve();
-                        } else {
-                            setTimeout(checkBuffer, 1000); // Check again after 1 second
-                        }
-                    } else {
-                        resolve(); // If there's no buffered data, proceed with appending
-                    }
-                };
-                checkBuffer();
-            });
-        }
-
-        function updateStats() {
-            document.getElementById('chunksDownloaded').textContent = chunksDownloaded;
-            const mbsDownloaded = (totalBytesDownloaded / (1024 * 1024)).toFixed(2);
-            document.getElementById('mbsDownloaded').textContent = mbsDownloaded;
-        }
-
-        // Initialize the video loading
-        loadVideo();
-
-        // Error handling for video element
-        const video = document.getElementById('videoPlayer');
-        video.addEventListener('error', function () {
-            console.error('Video error:', video.error);
-        });
-    </script>
 </body>
-
 </html>

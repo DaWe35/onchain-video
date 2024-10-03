@@ -1,1 +1,16 @@
-{}
+{
+  "name": "onchain-video",
+  "version": "1.0.0",
+  "description": "Upload and watch videos on the blockchain",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "serve -l 5000 --cors"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "serve": "^14.2.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
