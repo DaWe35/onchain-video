@@ -362,8 +362,7 @@
                 
                 const convertedSizeInMB = (convertedVideo.length / (1024 * 1024)).toFixed(2);
                 statusElement.innerHTML = `<br>Conversion complete!<br>
-                    ${chunkCount + 1} transactions will be required to upload ${convertedSizeInMB} MB to the blockchain 😲<br><br>
-                    Please click 'Create Onchain Video' to continue.`;
+                    ${chunkCount + 1} transactions will be required to upload ${convertedSizeInMB} MB to the blockchain 😲<br><br>`;
             } catch (error) {
                 console.error('Conversion error:', error);
                 statusElement.textContent = 'Conversion failed. Please try again.';
