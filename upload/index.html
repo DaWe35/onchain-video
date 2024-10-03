@@ -143,16 +143,49 @@
 
         async function switchNetwork() {
             try {
+                // Try to switch to the Blast Sepolia network
                 await window.ethereum.request({
                     method: 'wallet_switchEthereumChain',
                     params: [{ chainId: '0xa0c71fd' }], // Blast Sepolia chain ID
                 });
-                document.getElementById('switchNetworkBtn').style.display = 'none';
-                document.getElementById('createVideoBtn').style.display = 'inline';
             } catch (error) {
-                console.error('Failed to switch network:', error);
-                document.getElementById('status').textContent = 'Failed to switch network. Please try again.';
+                // If the error code is 4902, it means the chain is not added to MetaMask
+                if (error.code === 4902) {
+                    try {
+                        // Add the Blast Sepolia network to MetaMask
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: '0xa0c71fd',
+                                chainName: 'Blast Sepolia',
+                                nativeCurrency: {
+                                    name: 'Ethereum',
+                                    symbol: 'ETH',
+                                    decimals: 18
+                                },
+                                rpcUrls: ['https://sepolia.blast.io'],
+                                blockExplorerUrls: ['https://testnet.blastscan.io']
+                            }]
+                        });
+                        // After adding the network, try to switch again
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0xa0c71fd' }],
+                        });
+                    } catch (addError) {
+                        console.error('Failed to add Blast Sepolia network:', addError);
+                        document.getElementById('status').textContent = 'Failed to add Blast Sepolia network. Please add it manually in MetaMask.';
+                        return;
+                    }
+                } else {
+                    console.error('Failed to switch network:', error);
+                    document.getElementById('status').textContent = 'Failed to switch network. Please try again.';
+                    return;
+                }
             }
+
+            document.getElementById('switchNetworkBtn').style.display = 'none';
+            document.getElementById('createVideoBtn').style.display = 'inline';
         }
 
         async function createOnchainVideo() {
