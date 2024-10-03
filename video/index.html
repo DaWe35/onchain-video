@@ -25,6 +25,8 @@
         let contract;
         let videoId;
 
+        const BLAST_SEPOLIA_CHAIN_ID = '168587773'; // Blast Sepolia chain ID
+
         async function loadVideo() {
             // Get video ID from URL
             const urlParams = new URLSearchParams(window.location.search);
@@ -33,6 +35,9 @@
                 console.error('No video ID provided in the URL');
                 return;
             }
+
+            // Check and switch to Blast Sepolia network
+            await checkAndSwitchNetwork();
 
             // Initialize contract
             await initializeContract();
@@ -45,6 +50,46 @@
             document.getElementById('fileName').textContent = videoDetails.filename || 'Unknown';
 
             setupMediaSource();
+        }
+
+        async function checkAndSwitchNetwork() {
+            const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+            if (chainId !== BLAST_SEPOLIA_CHAIN_ID) {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: BLAST_SEPOLIA_CHAIN_ID }],
+                    });
+                } catch (switchError) {
+                    // This error code indicates that the chain has not been added to MetaMask
+                    if (switchError.code === 4902) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: BLAST_SEPOLIA_CHAIN_ID,
+                                    chainName: 'Blast Sepolia',
+                                    nativeCurrency: {
+                                        name: 'Ether',
+                                        symbol: 'ETH',
+                                        decimals: 18
+                                    },
+                                    rpcUrls: ['https://sepolia.blast.io'],
+                                    blockExplorerUrls: ['https://testnet.blastscan.io']
+                                }],
+                            });
+                        } catch (addError) {
+                            console.error('Failed to add Blast Sepolia network', addError);
+                            alert('Please add the Blast Sepolia network to your wallet and switch to it.');
+                            return;
+                        }
+                    } else {
+                        console.error('Failed to switch to Blast Sepolia network', switchError);
+                        alert('Please switch to the Blast Sepolia network in your wallet.');
+                        return;
+                    }
+                }
+            }
         }
 
         async function initializeContract() {
@@ -61,6 +106,14 @@
 
             // Create contract instance
             contract = new ethers.Contract(contractAddress, abi, signer);
+
+            // Add event listener for network changes
+            window.ethereum.on('chainChanged', (chainId) => {
+                if (chainId !== BLAST_SEPOLIA_CHAIN_ID) {
+                    alert('Please switch back to the Blast Sepolia network to use this application.');
+                    location.reload();
+                }
+            });
         }
 
         function setupMediaSource() {
