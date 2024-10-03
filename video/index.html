@@ -25,7 +25,7 @@
         let contract;
         let videoId;
 
-        const CHAIN_ID = '0xa0c71fd'; // Blast Sepolia chain ID
+        const CHAIN_ID = '0x13e31'; // Blast chain ID
 
         async function loadVideo() {
             // Get video ID from URL
@@ -33,6 +33,7 @@
             videoId = urlParams.get('v');
             if (!videoId) {
                 console.error('No video ID provided in the URL');
+                document.getElementById('fileName').textContent = 'Error: No video ID provided';
                 return;
             }
 
@@ -96,7 +97,7 @@
             // Load ABI and contract address
             const response = await fetch('/contract/abi.json');
             const abi = await response.json();
-            const contractAddress = '0xe9b1324f531a4603eb5d1a739e4ee25a5c824890';
+            const contractAddress = '0x1F00F51E00F10c019617fB4A50d4E893aaf8C98c';
 
             // Connect to Ethereum provider (e.g., MetaMask)
             await window.ethereum.request({ method: 'eth_requestAccounts' });
@@ -188,7 +189,7 @@
         function waitForSourceBuffer() {
             return new Promise((resolve) => {
                 const checkBuffer = () => {
-                    const sizeThreshold = 10 * 1024 * 1024; // 50 MB
+                    const sizeThreshold = 10 * 1024 * 1024; // 10 MB
 
                     if (sourceBuffer.buffered.length > 0) {
                         const bufferEnd = sourceBuffer.buffered.end(sourceBuffer.buffered.length - 1);
@@ -222,6 +223,13 @@
         const video = document.getElementById('videoPlayer');
         video.addEventListener('error', function () {
             console.error('Video error:', video.error);
+            document.getElementById('fileName').textContent = 'Error: Failed to load video';
+        });
+
+        // Add more specific error handling
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled promise rejection:', event.reason);
+            document.getElementById('fileName').textContent = 'Error: An unexpected error occurred';
         });
     </script>
 </body>

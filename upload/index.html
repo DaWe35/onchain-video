@@ -57,7 +57,7 @@
     <script>
         // Constants and global variables
         const { createFFmpeg, fetchFile } = FFmpeg;
-        const contractAddress = "0xe9b1324f531a4603eb5d1a739e4ee25a5c824890";
+        const contractAddress = "0x1F00F51E00F10c019617fB4A50d4E893aaf8C98c";
         const CHUNK_SIZE = 40 * 1024; // 40 KB
         let provider, signer, contract;
         let currentChainId;
@@ -146,7 +146,7 @@
 
         async function checkNetwork() {
             const network = await provider.getNetwork();
-            if (network.chainId.toString(16) !== 'a0c71fd') { // Blast Sepolia chain ID
+            if (network.chainId.toString(16) !== '13e31') { // Blast chain ID
                 document.getElementById('switchNetworkBtn').style.display = 'inline';
             } else {
                 document.getElementById('switchNetworkBtn').style.display = 'none';
@@ -158,7 +158,7 @@
             try {
                 await window.ethereum.request({
                     method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: '0xa0c71fd' }], // Blast Sepolia chain ID
+                    params: [{ chainId: '0x13e31' }], // Blast chain ID
                 });
             } catch (error) {
                 if (error.code === 4902) {
@@ -166,7 +166,7 @@
                         await window.ethereum.request({
                             method: 'wallet_addEthereumChain',
                             params: [{
-                                chainId: '0xa0c71fd',
+                                chainId: '0x13e31',
                                 chainName: 'Blast Sepolia',
                                 nativeCurrency: {
                                     name: 'Ethereum',
@@ -179,7 +179,7 @@
                         });
                         await window.ethereum.request({
                             method: 'wallet_switchEthereumChain',
-                            params: [{ chainId: '0xa0c71fd' }],
+                            params: [{ chainId: '0x13e31' }],
                         });
                     } catch (addError) {
                         console.error('Failed to add Blast Sepolia network:', addError);
@@ -223,7 +223,7 @@
                 }
                 
                 // Check if we're still on the correct network
-                if (currentChainId.toString(16) !== 'a0c71fd') {
+                if (currentChainId.toString(16) !== '13e31') {
                     throw new Error("Please switch to the Blast Sepolia network before creating a video.");
                 }
 
