@@ -12,7 +12,12 @@
 </head>
 <body>
     <h1><a href="/">Onchain Video</a> Uploader</h1>
-    <div id="fileInputContainer">
+    <div id="walletConnection">
+        <button id="connectWalletBtn">Connect Wallet</button>
+        <button id="switchNetworkBtn" style="display: none;">Switch to Blast Sepolia</button>
+    </div>
+    <div id="walletStatus" style="display: none;">Connecting wallet...</div>
+    <div id="fileInputContainer" style="display: none;">
         <p>
             Select a video file to upload:
             <input type="file" id="videoInput" accept="video/*">
@@ -44,12 +49,9 @@
         <span id="progressText">0%</span>
     </div>
     <div id="status"></div>
-    <button id="connectWalletBtn" style="display: none;">Connect Wallet</button>
-    <button id="switchNetworkBtn" style="display: none;">Switch to Blast Sepolia</button>
     <button id="createVideoBtn" style="display: none;">Create Onchain Video</button>
     <button id="uploadChunksBtn" style="display: none;">Upload Chunks (0/0)</button>
     <div id="videoInfo" style="display: none;"></div>
-    <div id="walletStatus" style="display: none;">Connecting wallet...</div>
     <button id="retryUploadBtn" style="display: none;">Retry Upload</button>
 
     <script>
@@ -103,7 +105,7 @@
             }
         }
 
-        // Main functions
+        // Modified main functions
         async function connectWallet() {
             const walletStatus = document.getElementById('walletStatus');
             walletStatus.style.display = 'block';
@@ -118,11 +120,9 @@
                     provider = new ethers.BrowserProvider(window.ethereum);
                     signer = await provider.getSigner();
                     
-                    // Get the current chain ID
                     const network = await provider.getNetwork();
                     currentChainId = network.chainId;
 
-                    // Initialize the contract
                     initializeContract();
 
                     document.getElementById('connectWalletBtn').style.display = 'none';
@@ -130,9 +130,13 @@
                     console.log("Contract initialized:", isContractInitialized());
                     console.log("Available contract methods:", Object.keys(contract));
                     walletStatus.textContent = 'Wallet connected successfully!';
-                    setTimeout(() => { walletStatus.style.display = 'none'; }, 3000);
+                    setTimeout(() => { 
+                        walletStatus.style.display = 'none';
+                        if (currentChainId.toString(16) === 'a0c71fd') {
+                            showFileInput();
+                        }
+                    }, 3000);
 
-                    // Add event listener for network changes
                     window.ethereum.on('chainChanged', handleChainChanged);
                 } catch (error) {
                     console.error('Failed to connect wallet:', error);
@@ -143,40 +147,25 @@
             }
         }
 
-        function initializeContract() {
-            contract = new ethers.Contract(contractAddress, contractABI, signer);
-        }
-
-        function handleChainChanged(chainId) {
-            console.log('Network changed to:', chainId);
-            currentChainId = chainId;
-            // Reload the page to ensure all states are reset
-            window.location.reload();
-        }
-
         async function checkNetwork() {
             const network = await provider.getNetwork();
             if (network.chainId.toString(16) !== 'a0c71fd') { // Blast Sepolia chain ID
                 document.getElementById('switchNetworkBtn').style.display = 'inline';
-                document.getElementById('createVideoBtn').style.display = 'none';
             } else {
                 document.getElementById('switchNetworkBtn').style.display = 'none';
-                document.getElementById('createVideoBtn').style.display = 'inline';
+                showFileInput();
             }
         }
 
         async function switchNetwork() {
             try {
-                // Try to switch to the Blast Sepolia network
                 await window.ethereum.request({
                     method: 'wallet_switchEthereumChain',
                     params: [{ chainId: '0xa0c71fd' }], // Blast Sepolia chain ID
                 });
             } catch (error) {
-                // If the error code is 4902, it means the chain is not added to MetaMask
                 if (error.code === 4902) {
                     try {
-                        // Add the Blast Sepolia network to MetaMask
                         await window.ethereum.request({
                             method: 'wallet_addEthereumChain',
                             params: [{
@@ -191,7 +180,6 @@
                                 blockExplorerUrls: ['https://testnet.blastscan.io']
                             }]
                         });
-                        // After adding the network, try to switch again
                         await window.ethereum.request({
                             method: 'wallet_switchEthereumChain',
                             params: [{ chainId: '0xa0c71fd' }],
@@ -209,7 +197,22 @@
             }
 
             document.getElementById('switchNetworkBtn').style.display = 'none';
-            document.getElementById('createVideoBtn').style.display = 'inline';
+            showFileInput();
+        }
+
+        function showFileInput() {
+            document.getElementById('fileInputContainer').style.display = 'block';
+        }
+
+        function initializeContract() {
+            contract = new ethers.Contract(contractAddress, contractABI, signer);
+        }
+
+        function handleChainChanged(chainId) {
+            console.log('Network changed to:', chainId);
+            currentChainId = chainId;
+            // Reload the page to ensure all states are reset
+            window.location.reload();
         }
 
         async function createOnchainVideo() {
@@ -358,12 +361,12 @@
                 const data = ffmpeg.FS('readFile', outputFileName);
                 convertedVideo = new Uint8Array(data.buffer);
                 chunkCount = Math.ceil(convertedVideo.length / CHUNK_SIZE);
-                document.getElementById('connectWalletBtn').style.display = 'inline';
+                document.getElementById('createVideoBtn').style.display = 'inline';
                 
                 const convertedSizeInMB = (convertedVideo.length / (1024 * 1024)).toFixed(2);
                 statusElement.innerHTML = `<br>Conversion complete!<br>
                     ${chunkCount + 1} transactions will be required to upload ${convertedSizeInMB} MB to the blockchain 😲<br><br>
-                    Please connect your wallet to continue.`;
+                    Please click 'Create Onchain Video' to continue.`;
             } catch (error) {
                 console.error('Conversion error:', error);
                 statusElement.textContent = 'Conversion failed. Please try again.';
@@ -376,6 +379,8 @@
         }
 
         // Event listeners
+        document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
+        document.getElementById('switchNetworkBtn').addEventListener('click', switchNetwork);
         document.getElementById('videoInput').addEventListener('change', async (event) => {
             const inputFile = event.target.files[0];
             if (inputFile) {
@@ -393,8 +398,6 @@
             }
         });
 
-        document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
-        document.getElementById('switchNetworkBtn').addEventListener('click', switchNetwork);
         document.getElementById('createVideoBtn').addEventListener('click', createOnchainVideo);
         document.getElementById('uploadChunksBtn').addEventListener('click', uploadChunksBatch);
         document.getElementById('retryUploadBtn').addEventListener('click', retryUpload);
