@@ -3,10 +3,13 @@
 
 <body>
     <h1><a href="/">Onchain Video</a> Player</h1>
-    <p><span id="fileName">Loading...</span></p>
+    <p id="instructionText">Start video by connecting a wallet - this site requires web3 transaction access, since all the videos are stored on the blockchain</p>
+    
+    <button id="connectWalletBtn">Connect Wallet</button>
 
     <video id="videoPlayer" controls style="max-width: 400px;"></video>
-    <div id="stats">
+    <div id="stats" style="display: none;">
+        <p><span id="fileName">Loading...</span></p>
         <p><span id="mbsDownloaded">0.00</span> MB downloaded from <span id="chunksDownloaded">0</span> blockchain transactions.</p>
     </div>
 
@@ -37,20 +40,40 @@
                 return;
             }
 
-            // Check and switch to Blast network
-            await checkAndSwitchNetwork();
+            // Show connect wallet button
+            document.getElementById('connectWalletBtn').style.display = 'block';
+        }
 
-            // Initialize contract
-            await initializeContract();
+        async function connectWallet() {
+            try {
+                // Check if ethereum object is available
+                if (typeof window.ethereum !== 'undefined') {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    await checkAndSwitchNetwork();
+                    await initializeContract();
+                    
+                    // Hide connect wallet button and instruction text
+                    document.getElementById('connectWalletBtn').style.display = 'none';
+                    document.getElementById('instructionText').style.display = 'none';
 
-            // Get video details
-            const videoDetails = await contract.getVideo(videoId);
-            chunkIds = videoDetails.chunkIds;
+                    // Show video player and stats
+                    document.getElementById('stats').style.display = 'block';
 
-            // Update file name in stats
-            document.getElementById('fileName').textContent = videoDetails.filename || 'Unknown';
+                    // Get video details
+                    const videoDetails = await contract.getVideo(videoId);
+                    chunkIds = videoDetails.chunkIds;
 
-            setupMediaSource();
+                    // Update file name in stats
+                    document.getElementById('fileName').textContent = videoDetails.filename || 'Unknown';
+
+                    setupMediaSource();
+                } else {
+                    alert('Please install MetaMask or another Ethereum wallet to use this application.');
+                }
+            } catch (error) {
+                console.error('Failed to connect wallet:', error);
+                alert('Failed to connect wallet. Please try again.');
+            }
         }
 
         async function checkAndSwitchNetwork() {
@@ -218,6 +241,9 @@
 
         // Initialize the video loading
         loadVideo();
+
+        // Add event listener for connect wallet button
+        document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
 
         // Error handling for video element
         const video = document.getElementById('videoPlayer');
