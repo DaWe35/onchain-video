@@ -1,21 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<body>
-    <h1><a href="/">Onchain Video</a> Player</h1>
-    <p id="instructionText">Start video by connecting a wallet - this site requires web3 transaction access, since all the videos are stored on the blockchain</p>
-    
-    <button id="connectWalletBtn">Connect Wallet</button>
-
-    <video id="videoPlayer" controls style="max-width: 400px;"></video>
-    <div id="stats" style="display: none;">
-        <p><span id="fileName">Loading...</span></p>
-        <p><span id="mbsDownloaded">0.00</span> MB downloaded from <span id="chunksDownloaded">0</span> blockchain transactions.</p>
-    </div>
+<head>    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onchain Video Player</title>
+    <link rel="stylesheet" href="/style.css">
 
     <link rel="stylesheet" href="/fontawesome-free-6.6.0-web/css/all.min.css">
-    <link rel="stylesheet" href="/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js" integrity="sha512-f+t6//rz3Iy3hp1CiwtsigYtyWuGk7bf6xl2RTOPvmyMIfTQJ4iy6Lg1dah1bsLQ9SLideJGicgmOkBsBXP1aA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <meta property="og:title" content="Onchain Video - upload and watch videos on the Blast blockchain" />
+    <meta property="og:url" content="https://onchainvideo.win/" />
+    <meta property="og:image" content="https://onchainvideo.win/og-image.png" />
 
     <script>
         let mediaSource;
@@ -258,6 +254,20 @@
             document.getElementById('fileName').textContent = 'Error: An unexpected error occurred';
         });
     </script>
+
+</head>
+
+<body>
+    <h1><a href="/">Onchain Video</a> Player</h1>
+    <p id="instructionText">Start video by connecting a wallet - this site requires web3 transaction access, since all the videos are stored on the blockchain</p>
+    
+    <button id="connectWalletBtn">Connect Wallet</button>
+
+    <video id="videoPlayer" controls style="max-width: 400px;"></video>
+    <div id="stats" style="display: none;">
+        <p><span id="fileName">Loading...</span></p>
+        <p><span id="mbsDownloaded">0.00</span> MB downloaded from <span id="chunksDownloaded">0</span> blockchain transactions.</p>
+    </div>
 </body>
 
 </html>
