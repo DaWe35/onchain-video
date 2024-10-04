@@ -1,6 +1,6 @@
 # Onchain Video
 
-Upload and watch videos on the blockchain.
+Upload and watch videos on the Blast EVM blockchain.
 
 No logical reason to do this.
 
