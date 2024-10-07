@@ -21,12 +21,10 @@
 
 <body>
     <h1><a href="/">Onchain Video</a> Player</h1>
-    <p id="instructionText">Start video by connecting a wallet - this site requires web3 transaction access, since all the videos are stored on the blockchain</p>
+    <p id="instructionText">Loading video from the blockchain...</p>
     
-    <button id="connectWalletBtn">Connect Wallet</button>
-
     <video id="videoPlayer" controls style="max-width: 400px;"></video>
-    <div id="stats" style="display: none;">
+    <div id="stats">
         <p><span id="fileName">Loading...</span></p>
         <p><span id="mbsDownloaded">0.00</span> MB downloaded from <span id="chunksDownloaded">0</span> blockchain transactions.</p>
     </div>
@@ -42,6 +40,7 @@
         let videoId;
 
         const CHAIN_ID = '0x13e31'; // Blast chain ID
+        const RPC_URL = 'https://rpc.blast.io'; // Public RPC endpoint for Blast
 
         async function loadVideo() {
             // Get video ID from URL
@@ -53,80 +52,16 @@
                 return;
             }
 
-            // Show connect wallet button
-            document.getElementById('connectWalletBtn').style.display = 'block';
-        }
+            await initializeContract();
+            
+            // Get video details
+            const videoDetails = await contract.getVideo(videoId);
+            chunkIds = videoDetails.chunkIds;
 
-        async function connectWallet() {
-            try {
-                // Check if ethereum object is available
-                if (typeof window.ethereum !== 'undefined') {
-                    await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    await checkAndSwitchNetwork();
-                    await initializeContract();
-                    
-                    // Hide connect wallet button and instruction text
-                    document.getElementById('connectWalletBtn').style.display = 'none';
-                    document.getElementById('instructionText').style.display = 'none';
+            // Update file name in stats
+            document.getElementById('fileName').textContent = videoDetails.filename || 'Unknown';
 
-                    // Show video player and stats
-                    document.getElementById('stats').style.display = 'block';
-
-                    // Get video details
-                    const videoDetails = await contract.getVideo(videoId);
-                    chunkIds = videoDetails.chunkIds;
-
-                    // Update file name in stats
-                    document.getElementById('fileName').textContent = videoDetails.filename || 'Unknown';
-
-                    setupMediaSource();
-                } else {
-                    alert('Please install MetaMask or another Ethereum wallet to use this application.');
-                }
-            } catch (error) {
-                console.error('Failed to connect wallet:', error);
-                alert('Failed to connect wallet. Please try again.');
-            }
-        }
-
-        async function checkAndSwitchNetwork() {
-            const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-            if (chainId !== CHAIN_ID) {
-                try {
-                    await window.ethereum.request({
-                        method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: CHAIN_ID }],
-                    });
-                } catch (switchError) {
-                    // This error code indicates that the chain has not been added to MetaMask
-                    if (switchError.code === 4902) {
-                        try {
-                            await window.ethereum.request({
-                                method: 'wallet_addEthereumChain',
-                                params: [{
-                                    chainId: CHAIN_ID,
-                                    chainName: 'Blast',
-                                    nativeCurrency: {
-                                        name: 'Ether',
-                                        symbol: 'ETH',
-                                        decimals: 18
-                                    },
-                                    rpcUrls: ['https://rpc.blast.io'],
-                                    blockExplorerUrls: ['https://blastscan.io']
-                                }],
-                            });
-                        } catch (addError) {
-                            console.error('Failed to add Blast network', addError);
-                            alert('Please add the Blast network to your wallet and switch to it.');
-                            return;
-                        }
-                    } else {
-                        console.error('Failed to switch to Blast network', switchError);
-                        alert('Please switch to the Blast network in your wallet.');
-                        return;
-                    }
-                }
-            }
+            setupMediaSource();
         }
 
         async function initializeContract() {
@@ -135,22 +70,11 @@
             const abi = await response.json();
             const contractAddress = '0x1F00F51E00F10c019617fB4A50d4E893aaf8C98c';
 
-            // Connect to Ethereum provider (e.g., MetaMask)
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
-
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const signer = await provider.getSigner();
+            // Create a read-only provider
+            const provider = new ethers.JsonRpcProvider(RPC_URL);
 
             // Create contract instance
-            contract = new ethers.Contract(contractAddress, abi, signer);
-
-            // Add event listener for network changes
-            window.ethereum.on('chainChanged', (chainId) => {
-                if (chainId !== CHAIN_ID) {
-                    alert('Please switch back to the Blast network to use this application.');
-                    location.reload();
-                }
-            });
+            contract = new ethers.Contract(contractAddress, abi, provider);
         }
 
         function setupMediaSource() {
