@@ -94,7 +94,7 @@
 
         async function loadABI() {
             try {
-                const response = await fetch('/contract/abi.json');
+                const response = await fetch('/abi.json');
                 contractABI = await response.json();
                 isABILoaded = true;
                 console.log("ABI loaded successfully");

@@ -39,8 +39,8 @@
         let contract;
         let videoId;
 
-        const CHAIN_ID = '0x13e31'; // Blast chain ID
         const RPC_URL = 'https://rpc.blast.io'; // Public RPC endpoint for Blast
+        const CONTRACT_ADDRESS = '0x1F00F51E00F10c019617fB4A50d4E893aaf8C98c';
 
         async function loadVideo() {
             // Get video ID from URL
@@ -66,15 +66,14 @@
 
         async function initializeContract() {
             // Load ABI and contract address
-            const response = await fetch('/contract/abi.json');
+            const response = await fetch('/abi.json');
             const abi = await response.json();
-            const contractAddress = '0x1F00F51E00F10c019617fB4A50d4E893aaf8C98c';
 
             // Create a read-only provider
             const provider = new ethers.JsonRpcProvider(RPC_URL);
 
             // Create contract instance
-            contract = new ethers.Contract(contractAddress, abi, provider);
+            contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
         }
 
         function setupMediaSource() {
