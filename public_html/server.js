@@ -10,7 +10,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files from the root directory
 app.use(express.static(path.join(__dirname)));
 
 // Handle routes
