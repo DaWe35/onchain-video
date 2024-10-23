@@ -4,7 +4,7 @@ Upload and watch videos on the Blast EVM blockchain.
 
 No logical reason to do this.
 
-## Demo
+## Live
 
 https://onchainvideo.win
 
