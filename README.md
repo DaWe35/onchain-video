@@ -4,11 +4,9 @@ Upload and watch videos on the Blast EVM blockchain.
 
 No logical reason to do this.
 
-# Try
+### Watch videos & upload: https://onchainvideo.win
 
-Watch videos & upload: https://onchainvideo.win
-
-Hackers can upload bigger videos with https://github.com/DaWe35/Onchain-Video-CLI
+#### Hackers can upload bigger videos with https://github.com/DaWe35/Onchain-Video-CLI
 
 ## Development
 
