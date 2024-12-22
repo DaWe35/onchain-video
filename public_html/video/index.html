@@ -34,7 +34,7 @@
         let sourceBuffer
         let chunkIds = [] // Array to store chunk IDs
         let currentChunkIndex = 0
-        const delay = 50 // Delay between segments in milliseconds
+        const delay = 100 // Delay between segments in milliseconds
         let totalBytesDownloaded = 0
         let chunksDownloaded = 0
         let contract
@@ -42,6 +42,11 @@
 
         const RPC_URL = 'https://rpc.blast.io' // Public RPC endpoint for Blast
         const CONTRACT_ADDRESS = '0x1F00F51E00F10c019617fB4A50d4E893aaf8C98c'
+        const MULTICALL3_ADDRESS = '0xcA11bde05977b3631167028862bE2a173976CA11' // Same address on all EVM chains
+        const MULTICALL3_ABI = [{"inputs":[{"components":[{"internalType":"address","name":"target","type":"address"},{"internalType":"bytes","name":"callData","type":"bytes"}],"internalType":"struct Multicall3.Call[]","name":"calls","type":"tuple[]"}],"name":"aggregate","outputs":[{"internalType":"uint256","name":"blockNumber","type":"uint256"},{"internalType":"bytes[]","name":"returnData","type":"bytes[]"}],"stateMutability":"payable","type":"function"}]
+
+        // Add multicall contract variable
+        let multicall
 
         async function loadVideo() {
             // Get video ID from URL
@@ -170,8 +175,9 @@
             // Create a read-only provider
             const provider = new ethers.JsonRpcProvider(RPC_URL)
 
-            // Create contract instance
+            // Create contract instances
             contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider)
+            multicall = new ethers.Contract(MULTICALL3_ADDRESS, MULTICALL3_ABI, provider)
         }
 
         function setupMediaSource() {
@@ -210,28 +216,58 @@
             }
 
             try {
-                // Fetch chunk from the blockchain using the current chunk ID
-                const chunkData = await contract.getChunk(chunkIds[currentChunkIndex])
+                // Calculate batch size
+                const remainingChunks = chunkIds.length - currentChunkIndex
+                const batchSize = Math.min(10, remainingChunks)
+                
+                // Prepare calls array for multicall
+                const calls = []
+                for (let i = 0; i < batchSize; i++) {
+                    // Encode the function call for getChunk
+                    const callData = contract.interface.encodeFunctionData(
+                        'getChunk',
+                        [chunkIds[currentChunkIndex + i]]
+                    )
+                    
+                    calls.push({
+                        target: CONTRACT_ADDRESS,
+                        callData: callData
+                    })
+                }
 
-                // Convert hex string to ArrayBuffer
-                const segmentBuffer = hexToArrayBuffer(chunkData)
+                // Make multicall
+                const [, returnData] = await multicall.aggregate.staticCall(calls)
 
-                // Check if sourceBuffer is too big
-                await waitForSourceBuffer()
-                sourceBuffer.appendBuffer(segmentBuffer)
-                currentChunkIndex++
+                // Process each chunk sequentially
+                for (let i = 0; i < returnData.length; i++) {
+                    // Decode the return data
+                    const chunkData = contract.interface.decodeFunctionResult(
+                        'getChunk',
+                        returnData[i]
+                    )[0]
 
-                // Update stats
-                chunksDownloaded++
-                totalBytesDownloaded += segmentBuffer.byteLength
-                updateStats()
+                    const segmentBuffer = hexToArrayBuffer(chunkData)
 
-                // Wait for the segment to be processed before loading the next one
-                sourceBuffer.addEventListener('updateend', () => {
-                    setTimeout(loadNextSegment, delay)
-                }, { once: true })
+                    // Wait for source buffer to be ready
+                    await waitForSourceBuffer()
+                    sourceBuffer.appendBuffer(segmentBuffer)
+                    currentChunkIndex++
+
+                    // Update stats
+                    chunksDownloaded++
+                    totalBytesDownloaded += segmentBuffer.byteLength
+                    updateStats()
+
+                    // Wait for the segment to be processed before continuing
+                    await new Promise(resolve => {
+                        sourceBuffer.addEventListener('updateend', resolve, { once: true })
+                    })
+                }
+
+                // Schedule next batch after a delay
+                setTimeout(loadNextSegment, delay)
             } catch (error) {
-                console.error('Error loading segment:', error)
+                console.error('Error loading segments:', error)
                 mediaSource.endOfStream()
             }
         }
