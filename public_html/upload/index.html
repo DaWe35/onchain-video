@@ -66,101 +66,101 @@
 
     <script>
         // Constants and global variables
-        const { createFFmpeg, fetchFile } = FFmpeg;
-        const contractAddress = "0x1F00F51E00F10c019617fB4A50d4E893aaf8C98c";
+        const { createFFmpeg, fetchFile } = FFmpeg
+        const contractAddress = "0x1F00F51E00F10c019617fB4A50d4E893aaf8C98c"
         const CHUNK_SIZE = 40 * 1024; // 40 KB
-        let provider, signer, contract;
-        let currentChainId;
-        let convertedVideo, chunkCount, uploadedChunks = 0;
-        let contractABI, isABILoaded = false, isFFmpegLoaded = false;
+        let provider, signer, contract
+        let currentChainId
+        let convertedVideo, chunkCount, uploadedChunks = 0
+        let contractABI, isABILoaded = false, isFFmpegLoaded = false
 
         // FFmpeg initialization
         const ffmpeg = createFFmpeg({ 
             log: true,
             progress: ({ ratio }) => {
-                const percent = (ratio * 100).toFixed(2);
-                document.getElementById('progressBar').value = percent;
-                document.getElementById('progressText').textContent = `${percent}%`;
+                const percent = (ratio * 100).toFixed(2)
+                document.getElementById('progressBar').value = percent
+                document.getElementById('progressText').textContent = `${percent}%`
             }
-        });
+        })
 
         // Utility functions
         async function loadFFmpeg() {
             if (!isFFmpegLoaded) {
-                await ffmpeg.load();
-                isFFmpegLoaded = true;
+                await ffmpeg.load()
+                isFFmpegLoaded = true
             }
         }
 
         async function loadABI() {
             try {
-                const response = await fetch('/abi.json');
-                contractABI = await response.json();
-                isABILoaded = true;
-                console.log("ABI loaded successfully");
+                const response = await fetch('/abi.json')
+                contractABI = await response.json()
+                isABILoaded = true
+                console.log("ABI loaded successfully")
             } catch (error) {
-                console.error("Failed to load ABI:", error);
+                console.error("Failed to load ABI:", error)
             }
         }
 
         function isContractInitialized() {
-            return contract !== undefined && contract !== null;
+            return contract !== undefined && contract !== null
         }
 
         function updateUploadButton() {
-            const btn = document.getElementById('uploadChunksBtn');
-            btn.textContent = `Upload Chunks (${uploadedChunks}/${chunkCount})`;
+            const btn = document.getElementById('uploadChunksBtn')
+            btn.textContent = `Upload Chunks (${uploadedChunks}/${chunkCount})`
             if (uploadedChunks === chunkCount) {
-                btn.disabled = true;
+                btn.disabled = true
             }
         }
 
         // Modified main functions
         async function connectWallet() {
-            const walletStatus = document.getElementById('walletStatus');
-            walletStatus.style.display = 'block';
-            walletStatus.textContent = 'Connecting wallet...';
+            const walletStatus = document.getElementById('walletStatus')
+            walletStatus.style.display = 'block'
+            walletStatus.textContent = 'Connecting wallet...'
 
             if (typeof window.ethereum !== 'undefined') {
                 try {
                     if (!isABILoaded) {
-                        throw new Error("ABI not loaded. Please refresh the page and try again.");
+                        throw new Error("ABI not loaded. Please refresh the page and try again.")
                     }
-                    await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    provider = new ethers.BrowserProvider(window.ethereum);
-                    signer = await provider.getSigner();
+                    await window.ethereum.request({ method: 'eth_requestAccounts' })
+                    provider = new ethers.BrowserProvider(window.ethereum)
+                    signer = await provider.getSigner()
                     
-                    const network = await provider.getNetwork();
-                    currentChainId = network.chainId;
+                    const network = await provider.getNetwork()
+                    currentChainId = network.chainId
 
-                    initializeContract();
+                    initializeContract()
 
-                    document.getElementById('connectWalletBtn').style.display = 'none';
-                    checkNetwork();
-                    console.log("Contract initialized:", isContractInitialized());
-                    console.log("Available contract methods:", Object.keys(contract));
-                    walletStatus.textContent = 'Wallet connected successfully!';
+                    document.getElementById('connectWalletBtn').style.display = 'none'
+                    checkNetwork()
+                    console.log("Contract initialized:", isContractInitialized())
+                    console.log("Available contract methods:", Object.keys(contract))
+                    walletStatus.textContent = 'Wallet connected successfully!'
                     setTimeout(() => { 
-                        walletStatus.style.display = 'none';
-                    }, 3000);
+                        walletStatus.style.display = 'none'
+                    }, 3000)
 
-                    window.ethereum.on('chainChanged', handleChainChanged);
+                    window.ethereum.on('chainChanged', handleChainChanged)
                 } catch (error) {
-                    console.error('Failed to connect wallet:', error);
-                    walletStatus.textContent = error.message || 'Failed to connect wallet. Please try again.';
+                    console.error('Failed to connect wallet:', error)
+                    walletStatus.textContent = error.message || 'Failed to connect wallet. Please try again.'
                 }
             } else {
-                walletStatus.textContent = 'Please install MetaMask to use this feature.';
+                walletStatus.textContent = 'Please install MetaMask to use this feature.'
             }
         }
 
         async function checkNetwork() {
-            const network = await provider.getNetwork();
+            const network = await provider.getNetwork()
             if (network.chainId.toString(16) !== '13e31') { // Blast chain ID
-                document.getElementById('switchNetworkBtn').style.display = 'inline';
+                document.getElementById('switchNetworkBtn').style.display = 'inline'
             } else {
-                document.getElementById('switchNetworkBtn').style.display = 'none';
-                showFileInput();
+                document.getElementById('switchNetworkBtn').style.display = 'none'
+                showFileInput()
             }
         }
 
@@ -169,7 +169,7 @@
                 await window.ethereum.request({
                     method: 'wallet_switchEthereumChain',
                     params: [{ chainId: '0x13e31' }], // Blast chain ID
-                });
+                })
             } catch (error) {
                 if (error.code === 4902) {
                     try {
@@ -186,136 +186,136 @@
                                 rpcUrls: ['https://rpc.blast.io'],
                                 blockExplorerUrls: ['https://blastscan.io']
                             }]
-                        });
+                        })
                         await window.ethereum.request({
                             method: 'wallet_switchEthereumChain',
                             params: [{ chainId: '0x13e31' }],
-                        });
+                        })
                     } catch (addError) {
-                        console.error('Failed to add Blast network:', addError);
-                        document.getElementById('status').textContent = 'Failed to add Blast network. Please add it manually in MetaMask.';
-                        return;
+                        console.error('Failed to add Blast network:', addError)
+                        document.getElementById('status').textContent = 'Failed to add Blast network. Please add it manually in MetaMask.'
+                        return
                     }
                 } else {
-                    console.error('Failed to switch network:', error);
-                    document.getElementById('status').textContent = 'Failed to switch network. Please try again.';
-                    return;
+                    console.error('Failed to switch network:', error)
+                    document.getElementById('status').textContent = 'Failed to switch network. Please try again.'
+                    return
                 }
             }
 
-            document.getElementById('switchNetworkBtn').style.display = 'none';
-            showFileInput();
+            document.getElementById('switchNetworkBtn').style.display = 'none'
+            showFileInput()
         }
 
         function showFileInput() {
-            document.getElementById('fileInputContainer').style.display = 'block';
+            document.getElementById('fileInputContainer').style.display = 'block'
         }
 
         function initializeContract() {
-            contract = new ethers.Contract(contractAddress, contractABI, signer);
+            contract = new ethers.Contract(contractAddress, contractABI, signer)
         }
 
         function handleChainChanged(chainId) {
-            console.log('Network changed to:', chainId);
-            currentChainId = chainId;
+            console.log('Network changed to:', chainId)
+            currentChainId = chainId
             // Reload the page to ensure all states are reset
-            window.location.reload();
+            window.location.reload()
         }
 
         async function createOnchainVideo() {
-            const inputFile = document.getElementById('videoInput').files[0];
-            const createVideoBtn = document.getElementById('createVideoBtn');
-            const statusElement = document.getElementById('status');
+            const inputFile = document.getElementById('videoInput').files[0]
+            const createVideoBtn = document.getElementById('createVideoBtn')
+            const statusElement = document.getElementById('status')
 
             try {
                 if (!isContractInitialized()) {
-                    throw new Error("Contract is not initialized. Please connect your wallet first.");
+                    throw new Error("Contract is not initialized. Please connect your wallet first.")
                 }
                 
                 // Check if we're still on the correct network
                 if (currentChainId.toString(16) !== '13e31') {
-                    throw new Error("Please switch to the Blast network before creating a video.");
+                    throw new Error("Please switch to the Blast network before creating a video.")
                 }
 
-                createVideoBtn.style.display = 'none';
-                statusElement.textContent = 'Creating onchain video... Please wait for confirmation.';
+                createVideoBtn.style.display = 'none'
+                statusElement.textContent = 'Creating onchain video... Please wait for confirmation.'
                 
                 // Create metadata object with codec information
                 const metadata = {
                     codec: 'video/mp4; codecs="avc1.64002A, mp4a.40.5"'
-                };
+                }
                 
-                const tx = await contract.createOnchainVideo(inputFile.name, 0, JSON.stringify(metadata));
-                await tx.wait();
+                const tx = await contract.createOnchainVideo(inputFile.name, 0, JSON.stringify(metadata))
+                await tx.wait()
                 
-                const address = await signer.getAddress();
-                const videoIds = await contract.getVideoIds(address);
-                const videoId = videoIds[videoIds.length - 1].toString();
-                console.log("Video ID:", videoId);
+                const address = await signer.getAddress()
+                const videoIds = await contract.getVideoIds(address)
+                const videoId = videoIds[videoIds.length - 1].toString()
+                console.log("Video ID:", videoId)
                 
-                statusElement.textContent = `Onchain video created. Starting chunk uploads... (make sure gas limit is just below 30M, eg. 29700000)`;
-                uploadChunksBatch(videoId);
+                statusElement.textContent = `Onchain video created. Starting chunk uploads... (make sure gas limit is just below 30M, eg. 29700000)`
+                uploadChunksBatch(videoId)
             } catch (error) {
-                console.error('Failed to create onchain video:', error);
-                statusElement.textContent = 'Failed to create onchain video. Please try again.';
-                createVideoBtn.style.display = 'inline';
+                console.error('Failed to create onchain video:', error)
+                statusElement.textContent = 'Failed to create onchain video. Please try again.'
+                createVideoBtn.style.display = 'inline'
             }
         }
 
         async function uploadChunksBatch(videoId) {
-            const statusElement = document.getElementById('status');
-            const retryButton = document.getElementById('retryUploadBtn');
+            const statusElement = document.getElementById('status')
+            const retryButton = document.getElementById('retryUploadBtn')
 
             for (let i = uploadedChunks; i < chunkCount; i++) {
-                const chunk = convertedVideo.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+                const chunk = convertedVideo.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE)
                 try {
                     const tx = await contract.uploadChunk(ethers.hexlify(chunk), videoId, {
                         gasLimit: 29700000
-                    });
-                    statusElement.textContent = `Uploading chunk ${i + 1}/${chunkCount}... Transaction sent.`;
-                    uploadedChunks++;
-                    updateUploadButton();
+                    })
+                    statusElement.textContent = `Uploading chunk ${i + 1}/${chunkCount}... Transaction sent.`
+                    uploadedChunks++
+                    updateUploadButton()
                 } catch (error) {
-                    console.error(`Failed to upload chunk ${i + 1}:`, error);
-                    lastFailedChunkIndex = i;
-                    statusElement.textContent = `Failed to upload chunk ${i + 1}. Click 'Retry Upload' to continue.`;
-                    statusElement.innerHTML += `<br>ps: if you have gas issues, try to set the gas limit manually to 29700000.`;
-                    retryButton.style.display = 'inline';
-                    return;
+                    console.error(`Failed to upload chunk ${i + 1}:`, error)
+                    lastFailedChunkIndex = i
+                    statusElement.textContent = `Failed to upload chunk ${i + 1}. Click 'Retry Upload' to continue.`
+                    statusElement.innerHTML += `<br>ps: if you have gas issues, try to set the gas limit manually to 29700000.`
+                    retryButton.style.display = 'inline'
+                    return
                 }
             }
 
-            displayVideoInfo(videoId);
-            statusElement.textContent = 'All chunks uploaded successfully! You can play it after all transactions are confirmed.';
-            retryButton.style.display = 'none';
+            displayVideoInfo(videoId)
+            statusElement.textContent = 'All chunks uploaded successfully! You can play it after all transactions are confirmed.'
+            retryButton.style.display = 'none'
         }
 
         async function retryUpload() {
-            const retryButton = document.getElementById('retryUploadBtn');
-            retryButton.style.display = 'none';
+            const retryButton = document.getElementById('retryUploadBtn')
+            retryButton.style.display = 'none'
             
             if (lastFailedChunkIndex !== -1) {
-                uploadedChunks = lastFailedChunkIndex;
-                updateUploadButton();
+                uploadedChunks = lastFailedChunkIndex
+                updateUploadButton()
                 
                 // Get the current video ID
-                const address = await signer.getAddress();
-                const videoCount = await contract.getVideoCount(address);
-                const videoId = (videoCount - BigInt(1)).toString();
+                const address = await signer.getAddress()
+                const videoCount = await contract.getVideoCount(address)
+                const videoId = (videoCount - BigInt(1)).toString()
                 
-                await uploadChunksBatch(videoId);
+                await uploadChunksBatch(videoId)
             }
         }
 
         async function displayVideoInfo(videoId) {
             try {
-                const video = await contract.getVideo(videoId);
-                console.log("Video:", video);
-                const videoInfo = document.getElementById('videoInfo');
+                const video = await contract.getVideo(videoId)
+                console.log("Video:", video)
+                const videoInfo = document.getElementById('videoInfo')
                 
-                const filename = video.filename || 'N/A';
-                const duration = video.duration ? video.duration.toString() : 'N/A';
-                const chunkCount = video.chunkIds ? video.chunkIds.length.toString() : 'N/A';
+                const filename = video.filename || 'N/A'
+                const duration = video.duration ? video.duration.toString() : 'N/A'
+                const chunkCount = video.chunkIds ? video.chunkIds.length.toString() : 'N/A'
                 
                 videoInfo.innerHTML = `
                     <h2>Video Information</h2>
@@ -323,35 +323,35 @@
                     <p>Filename: ${filename}</p>
                     <p>Duration: ${duration}</p>
                     <p>Chunk Count: ${chunkCount}</p>
-                `;
-                videoInfo.style.display = 'block';
+                `
+                videoInfo.style.display = 'block'
             } catch (error) {
-                console.error('Error displaying video info:', error);
-                document.getElementById('status').textContent = 'Failed to retrieve video information. Please try again.';
+                console.error('Error displaying video info:', error)
+                document.getElementById('status').textContent = 'Failed to retrieve video information. Please try again.'
             }
         }
 
         async function convertToFragmentedMP4(inputFile) {
-            const statusElement = document.getElementById('status');
-            const progressContainer = document.getElementById('progressContainer');
-            const fileInputContainer = document.getElementById('fileInputContainer');
-            const selectedFileInfo = document.getElementById('selectedFileInfo');
-            const resolutionSelector = document.getElementById('resolutionSelector');
+            const statusElement = document.getElementById('status')
+            const progressContainer = document.getElementById('progressContainer')
+            const fileInputContainer = document.getElementById('fileInputContainer')
+            const selectedFileInfo = document.getElementById('selectedFileInfo')
+            const resolutionSelector = document.getElementById('resolutionSelector')
             
-            statusElement.textContent = 'Converting...';
-            progressContainer.style.display = 'block';
-            fileInputContainer.style.display = 'none';
-            resolutionSelector.style.display = 'none';
-            selectedFileInfo.textContent = `Selected file: ${inputFile.name}`;
-            selectedFileInfo.style.display = 'block';
+            statusElement.textContent = 'Converting...'
+            progressContainer.style.display = 'block'
+            fileInputContainer.style.display = 'none'
+            resolutionSelector.style.display = 'none'
+            selectedFileInfo.textContent = `Selected file: ${inputFile.name}`
+            selectedFileInfo.style.display = 'block'
 
             try {
-                await loadFFmpeg();
-                const inputFileName = 'input_video';
-                const outputFileName = 'output_fragmented.mp4';
-                ffmpeg.FS('writeFile', inputFileName, await fetchFile(inputFile));
+                await loadFFmpeg()
+                const inputFileName = 'input_video'
+                const outputFileName = 'output_fragmented.mp4'
+                ffmpeg.FS('writeFile', inputFileName, await fetchFile(inputFile))
 
-                const height = document.getElementById('resolutionSelect').value;
+                const height = document.getElementById('resolutionSelect').value
 
                 await ffmpeg.run(
                     '-i', inputFileName,
@@ -364,52 +364,52 @@
                     '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
                     '-f', 'mp4',
                     outputFileName
-                );
-                const data = ffmpeg.FS('readFile', outputFileName);
-                convertedVideo = new Uint8Array(data.buffer);
-                chunkCount = Math.ceil(convertedVideo.length / CHUNK_SIZE);
-                document.getElementById('createVideoBtn').style.display = 'inline';
+                )
+                const data = ffmpeg.FS('readFile', outputFileName)
+                convertedVideo = new Uint8Array(data.buffer)
+                chunkCount = Math.ceil(convertedVideo.length / CHUNK_SIZE)
+                document.getElementById('createVideoBtn').style.display = 'inline'
                 
-                const convertedSizeInMB = (convertedVideo.length / (1024 * 1024)).toFixed(2);
+                const convertedSizeInMB = (convertedVideo.length / (1024 * 1024)).toFixed(2)
                 statusElement.innerHTML = `<br>Conversion complete!<br>
-                    ${chunkCount + 1} transactions will be required to upload ${convertedSizeInMB} MB to the blockchain 😲<br><br>`;
+                    ${chunkCount + 1} transactions will be required to upload ${convertedSizeInMB} MB to the blockchain 😲<br><br>`
             } catch (error) {
-                console.error('Conversion error:', error);
-                statusElement.textContent = 'Conversion failed. Please try again.';
-                fileInputContainer.style.display = 'block';
-                resolutionSelector.style.display = 'none';
-                selectedFileInfo.style.display = 'none';
+                console.error('Conversion error:', error)
+                statusElement.textContent = 'Conversion failed. Please try again.'
+                fileInputContainer.style.display = 'block'
+                resolutionSelector.style.display = 'none'
+                selectedFileInfo.style.display = 'none'
             } finally {
-                progressContainer.style.display = 'none';
+                progressContainer.style.display = 'none'
             }
         }
 
         // Event listeners
-        document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
-        document.getElementById('switchNetworkBtn').addEventListener('click', switchNetwork);
+        document.getElementById('connectWalletBtn').addEventListener('click', connectWallet)
+        document.getElementById('switchNetworkBtn').addEventListener('click', switchNetwork)
         document.getElementById('videoInput').addEventListener('change', async (event) => {
-            const inputFile = event.target.files[0];
+            const inputFile = event.target.files[0]
             if (inputFile) {
-                document.getElementById('fileInputContainer').style.display = 'none';
-                document.getElementById('resolutionSelector').style.display = 'block';
-                document.getElementById('selectedFileInfo').textContent = `Selected file: ${inputFile.name}`;
-                document.getElementById('selectedFileInfo').style.display = 'block';
+                document.getElementById('fileInputContainer').style.display = 'none'
+                document.getElementById('resolutionSelector').style.display = 'block'
+                document.getElementById('selectedFileInfo').textContent = `Selected file: ${inputFile.name}`
+                document.getElementById('selectedFileInfo').style.display = 'block'
             }
-        });
+        })
 
         document.getElementById('convertBtn').addEventListener('click', async () => {
-            const inputFile = document.getElementById('videoInput').files[0];
+            const inputFile = document.getElementById('videoInput').files[0]
             if (inputFile) {
-                await convertToFragmentedMP4(inputFile);
+                await convertToFragmentedMP4(inputFile)
             }
-        });
+        })
 
-        document.getElementById('createVideoBtn').addEventListener('click', createOnchainVideo);
-        document.getElementById('uploadChunksBtn').addEventListener('click', uploadChunksBatch);
-        document.getElementById('retryUploadBtn').addEventListener('click', retryUpload);
+        document.getElementById('createVideoBtn').addEventListener('click', createOnchainVideo)
+        document.getElementById('uploadChunksBtn').addEventListener('click', uploadChunksBatch)
+        document.getElementById('retryUploadBtn').addEventListener('click', retryUpload)
 
         // Initialize
-        loadABI();
+        loadABI()
     </script>
 </body>
 </html>

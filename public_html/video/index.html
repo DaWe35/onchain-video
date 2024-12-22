@@ -30,264 +30,264 @@
         <p><span id="gasSpent">Estimate</span> upload cost.</p>
     </div>
     <script>
-        let mediaSource;
-        let sourceBuffer;
-        let chunkIds = []; // Array to store chunk IDs
-        let currentChunkIndex = 0;
-        const delay = 50; // Delay between segments in milliseconds
-        let totalBytesDownloaded = 0;
-        let chunksDownloaded = 0;
-        let contract;
-        let videoId;
+        let mediaSource
+        let sourceBuffer
+        let chunkIds = [] // Array to store chunk IDs
+        let currentChunkIndex = 0
+        const delay = 50 // Delay between segments in milliseconds
+        let totalBytesDownloaded = 0
+        let chunksDownloaded = 0
+        let contract
+        let videoId
 
-        const RPC_URL = 'https://rpc.blast.io'; // Public RPC endpoint for Blast
-        const CONTRACT_ADDRESS = '0x1F00F51E00F10c019617fB4A50d4E893aaf8C98c';
+        const RPC_URL = 'https://rpc.blast.io' // Public RPC endpoint for Blast
+        const CONTRACT_ADDRESS = '0x1F00F51E00F10c019617fB4A50d4E893aaf8C98c'
 
         async function loadVideo() {
             // Get video ID from URL
-            const urlParams = new URLSearchParams(window.location.search);
-            videoId = urlParams.get('v');
+            const urlParams = new URLSearchParams(window.location.search)
+            videoId = urlParams.get('v')
             if (!videoId) {
-                console.error('No video ID provided in the URL');
-                document.getElementById('fileName').textContent = 'Error: No video ID provided';
-                return;
+                console.error('No video ID provided in the URL')
+                document.getElementById('fileName').textContent = 'Error: No video ID provided'
+                return
             }
 
-            await initializeContract();
+            await initializeContract()
             
             // Get video details
-            const videoDetails = await contract.getVideo(videoId);
-            chunkIds = videoDetails.chunkIds;
+            const videoDetails = await contract.getVideo(videoId)
+            chunkIds = videoDetails.chunkIds
 
             // Update file name in stats
-            document.getElementById('fileName').textContent = videoDetails.filename || 'Unknown';
-            document.getElementById('gasSpent').innerHTML = `<a href="javascript:displayGasSpent('${videoDetails.owner}', ${videoId}, ${chunkIds.length})">Estimate</a>`;
+            document.getElementById('fileName').textContent = videoDetails.filename || 'Unknown'
+            document.getElementById('gasSpent').innerHTML = `<a href="javascript:displayGasSpent('${videoDetails.owner}', ${videoId}, ${chunkIds.length})">Estimate</a>`
 
-            setupMediaSource();
+            setupMediaSource()
         }
-        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
         async function fetchTransactionPage(address, pageNumber) {
             while (true) {
                 const response = await fetch(
                     `https://api.blastscan.io/api?module=account&address=${address}&action=txlist&offset=100&page=${pageNumber}`
-                );
-                const data = await response.json();
+                )
+                const data = await response.json()
                 
                 // Check if we hit rate limit
                 if (data.status === "0" && data.message === "NOTOK" && 
                     data.result.includes("Max rate limit reached")) {
-                    console.log("Rate limit hit, waiting 5 seconds before retry...");
-                    await sleep(5000); // Wait 5 seconds
-                    continue; // Retry the request
+                    console.log("Rate limit hit, waiting 5 seconds before retry...")
+                    await sleep(5000) // Wait 5 seconds
+                    continue // Retry the request
                 }
                 
-                return data.result || [];
+                return data.result || []
             }
         }
         
         async function estimateGasSpent(address, videoId, chunkNumber) {
-            let gasSpent = ethers.getBigInt(0);
-            let matchingChunks = 0;
-            let page = 1;
+            let gasSpent = ethers.getBigInt(0)
+            let matchingChunks = 0
+            let page = 1
             
 
             
             while (matchingChunks < chunkNumber) {
-                console.log(`Fetching account tx page ${page}`);
-                const transactions = await fetchTransactionPage(address, page);
+                console.log(`Fetching account tx page ${page}`)
+                const transactions = await fetchTransactionPage(address, page)
                 
                 // If no more transactions, break
                 if (!transactions || transactions.length === 0) {
-                    break;
+                    break
                 }
                 
                 for (const tx of transactions) {
                     // Check if this is a transaction to our contract
                     if (tx.to?.toLowerCase() === CONTRACT_ADDRESS.toLowerCase()) {
-                        const inputData = tx.input;
+                        const inputData = tx.input
                         if (inputData.length >= 138) {
-                            const methodId = inputData.slice(0, 10);
-                            const videoIdHex = inputData.slice(74, 138);
-                            const txVideoId = parseInt(videoIdHex, 16);
+                            const methodId = inputData.slice(0, 10)
+                            const videoIdHex = inputData.slice(74, 138)
+                            const txVideoId = parseInt(videoIdHex, 16)
                             
                             if (methodId === '0x9e7d84b3' && txVideoId === parseInt(videoId)) {
                                 // Convert gas values to BigInt and multiply
-                                const gasPrice = ethers.getBigInt(tx.gasPrice);
-                                const gasUsed = ethers.getBigInt(tx.gasUsed);
-                                gasSpent += gasPrice * gasUsed;
-                                matchingChunks++;
+                                const gasPrice = ethers.getBigInt(tx.gasPrice)
+                                const gasUsed = ethers.getBigInt(tx.gasUsed)
+                                gasSpent += gasPrice * gasUsed
+                                matchingChunks++
                                 
                                 if (matchingChunks >= chunkNumber) {
-                                    break;
+                                    break
                                 }
                             }
                         }
                     }
                 }
                 
-                page++;
+                page++
             }
             
-            console.log(`Found ${matchingChunks} matching chunks with total gas spent: ${gasSpent.toString()}`);
-            return gasSpent;
+            console.log(`Found ${matchingChunks} matching chunks with total gas spent: ${gasSpent.toString()}`)
+            return gasSpent
         }
 
         async function displayGasSpent(address, videoId, chunkNumber) {
-            document.getElementById('gasSpent').textContent = "........";
+            document.getElementById('gasSpent').textContent = "........"
             setTimeout(async () => {
                 if (document.getElementById('gasSpent').textContent === "........") {
-                    document.getElementById('gasSpent').textContent = "This may take a while... Estimating";
+                    document.getElementById('gasSpent').textContent = "This may take a while... Estimating"
                 }
-            }, 5000);
-            const gasSpentInWei = await estimateGasSpent(address, videoId, chunkNumber);
+            }, 5000)
+            const gasSpentInWei = await estimateGasSpent(address, videoId, chunkNumber)
             
             // Convert gas spent from Wei to Ether and format to 4 decimal places
-            const gasSpentInEth = Number(ethers.formatEther(gasSpentInWei)).toFixed(4);
+            const gasSpentInEth = Number(ethers.formatEther(gasSpentInWei)).toFixed(4)
             
             // Fetch the current ETH to USD price
-            const ethToUsdPrice = await fetchEthToUsdPrice();
+            const ethToUsdPrice = await fetchEthToUsdPrice()
             
             // Calculate gas spent in USD
-            const gasSpentInUsd = (parseFloat(gasSpentInEth) * ethToUsdPrice).toFixed(2);
+            const gasSpentInUsd = (parseFloat(gasSpentInEth) * ethToUsdPrice).toFixed(2)
             
-            document.getElementById('gasSpent').textContent = `${gasSpentInEth} ETH ($${gasSpentInUsd})`;
+            document.getElementById('gasSpent').textContent = `${gasSpentInEth} ETH ($${gasSpentInUsd})`
         }
 
         async function fetchEthToUsdPrice() {
-            const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
-            const data = await response.json();
-            return data.ethereum.usd;
+            const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd')
+            const data = await response.json()
+            return data.ethereum.usd
         }
 
         // estimateGasSpent("0x8b62eed961daf1e95beee7cd58881ead18341ca7", 2)
 
         async function initializeContract() {
             // Load ABI and contract address
-            const response = await fetch('/abi.json');
-            const abi = await response.json();
+            const response = await fetch('/abi.json')
+            const abi = await response.json()
 
             // Create a read-only provider
-            const provider = new ethers.JsonRpcProvider(RPC_URL);
+            const provider = new ethers.JsonRpcProvider(RPC_URL)
 
             // Create contract instance
-            contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
+            contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider)
         }
 
         function setupMediaSource() {
-            const video = document.getElementById('videoPlayer');
-            mediaSource = new MediaSource();
-            video.src = URL.createObjectURL(mediaSource);
+            const video = document.getElementById('videoPlayer')
+            mediaSource = new MediaSource()
+            video.src = URL.createObjectURL(mediaSource)
 
-            mediaSource.addEventListener('sourceopen', sourceOpen);
+            mediaSource.addEventListener('sourceopen', sourceOpen)
         }
 
         async function sourceOpen() {
             // Fetch video metadata from the contract
-            const videoDetails = await contract.getVideo(videoId);
-            const metadata = JSON.parse(videoDetails.metadata || '{}');
+            const videoDetails = await contract.getVideo(videoId)
+            const metadata = JSON.parse(videoDetails.metadata || '{}')
             
             // Use the codec from metadata, or fall back to a default if not available
-            const mimeCodec = metadata.codec || 'video/mp4; codecs="avc1.64002A, mp4a.40.5"';
+            const mimeCodec = metadata.codec || 'video/mp4; codecs="avc1.64002A, mp4a.40.5"'
             
             if (!MediaSource.isTypeSupported(mimeCodec)) {
-                console.error('Unsupported MIME type or codec: ', mimeCodec);
-                return;
+                console.error('Unsupported MIME type or codec: ', mimeCodec)
+                return
             }
 
             try {
-                sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);
-                loadNextSegment();
+                sourceBuffer = mediaSource.addSourceBuffer(mimeCodec)
+                loadNextSegment()
             } catch (e) {
-                console.error('Exception while adding source buffer', e);
+                console.error('Exception while adding source buffer', e)
             }
         }
 
         async function loadNextSegment() {
             if (currentChunkIndex >= chunkIds.length) {
-                mediaSource.endOfStream();
-                return;
+                mediaSource.endOfStream()
+                return
             }
 
             try {
                 // Fetch chunk from the blockchain using the current chunk ID
-                const chunkData = await contract.getChunk(chunkIds[currentChunkIndex]);
+                const chunkData = await contract.getChunk(chunkIds[currentChunkIndex])
 
                 // Convert hex string to ArrayBuffer
-                const segmentBuffer = hexToArrayBuffer(chunkData);
+                const segmentBuffer = hexToArrayBuffer(chunkData)
 
                 // Check if sourceBuffer is too big
-                await waitForSourceBuffer();
-                sourceBuffer.appendBuffer(segmentBuffer);
-                currentChunkIndex++;
+                await waitForSourceBuffer()
+                sourceBuffer.appendBuffer(segmentBuffer)
+                currentChunkIndex++
 
                 // Update stats
-                chunksDownloaded++;
-                totalBytesDownloaded += segmentBuffer.byteLength;
-                updateStats();
+                chunksDownloaded++
+                totalBytesDownloaded += segmentBuffer.byteLength
+                updateStats()
 
                 // Wait for the segment to be processed before loading the next one
                 sourceBuffer.addEventListener('updateend', () => {
-                    setTimeout(loadNextSegment, delay);
-                }, { once: true });
+                    setTimeout(loadNextSegment, delay)
+                }, { once: true })
             } catch (error) {
-                console.error('Error loading segment:', error);
-                mediaSource.endOfStream();
+                console.error('Error loading segment:', error)
+                mediaSource.endOfStream()
             }
         }
 
         function hexToArrayBuffer(hexString) {
             // Remove '0x' prefix if present
-            const cleanHexString = hexString.startsWith('0x') ? hexString.slice(2) : hexString;
-            const bytes = new Uint8Array(cleanHexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-            return bytes.buffer;
+            const cleanHexString = hexString.startsWith('0x') ? hexString.slice(2) : hexString
+            const bytes = new Uint8Array(cleanHexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
+            return bytes.buffer
         }
 
         function waitForSourceBuffer() {
             return new Promise((resolve) => {
                 const checkBuffer = () => {
-                    const sizeThreshold = 10 * 1024 * 1024; // 10 MB
+                    const sizeThreshold = 10 * 1024 * 1024 // 10 MB
 
                     if (sourceBuffer.buffered.length > 0) {
-                        const bufferEnd = sourceBuffer.buffered.end(sourceBuffer.buffered.length - 1);
+                        const bufferEnd = sourceBuffer.buffered.end(sourceBuffer.buffered.length - 1)
                         
                         // Estimate buffer size (this is an approximation)
-                        const estimatedBufferSize = totalBytesDownloaded - (document.getElementById('videoPlayer').currentTime * (totalBytesDownloaded / bufferEnd));
+                        const estimatedBufferSize = totalBytesDownloaded - (document.getElementById('videoPlayer').currentTime * (totalBytesDownloaded / bufferEnd))
 
                         if (estimatedBufferSize < sizeThreshold) {
-                            resolve();
+                            resolve()
                         } else {
-                            setTimeout(checkBuffer, 1000); // Check again after 1 second
+                            setTimeout(checkBuffer, 1000) // Check again after 1 second
                         }
                     } else {
-                        resolve(); // If there's no buffered data, proceed with appending
+                        resolve() // If there's no buffered data, proceed with appending
                     }
-                };
-                checkBuffer();
-            });
+                }
+                checkBuffer()
+            })
         }
 
         function updateStats() {
-            document.getElementById('chunksDownloaded').textContent = chunksDownloaded;
-            const mbsDownloaded = (totalBytesDownloaded / (1024 * 1024)).toFixed(2);
-            document.getElementById('mbsDownloaded').textContent = mbsDownloaded;
+            document.getElementById('chunksDownloaded').textContent = chunksDownloaded
+            const mbsDownloaded = (totalBytesDownloaded / (1024 * 1024)).toFixed(2)
+            document.getElementById('mbsDownloaded').textContent = mbsDownloaded
         }
 
         // Initialize the video loading
-        loadVideo();
+        loadVideo()
 
         // Error handling for video element
-        const video = document.getElementById('videoPlayer');
+        const video = document.getElementById('videoPlayer')
         video.addEventListener('error', function () {
-            console.error('Video error:', video.error);
-            document.getElementById('fileName').textContent = 'Error: Failed to load video';
-        });
+            console.error('Video error:', video.error)
+            document.getElementById('fileName').textContent = 'Error: Failed to load video'
+        })
 
         // Add more specific error handling
         window.addEventListener('unhandledrejection', function(event) {
-            console.error('Unhandled promise rejection:', event.reason);
-            document.getElementById('fileName').textContent = 'Error: An unexpected error occurred';
-        });
+            console.error('Unhandled promise rejection:', event.reason)
+            document.getElementById('fileName').textContent = 'Error: An unexpected error occurred'
+        })
     </script>
 </body>
 
