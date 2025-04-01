@@ -3,6 +3,7 @@ services:
   app:
     image: node:20
     working_dir: /app
+    restart: unless-stopped
     volumes:
       - .:/app
     ports:
