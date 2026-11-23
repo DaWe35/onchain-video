@@ -4,7 +4,7 @@ Upload and watch videos on the Blast EVM blockchain.
 
 No logical reason to do this.
 
-Blash blockchain is deprecated now, so I'm archiving this project. It should still work on other blockchains.
+The Blast blockchain is deprecated now, , but it should still work on other blockchains.
 
 #### Hackers can upload bigger videos with https://github.com/DaWe35/Onchain-Video-CLI
 
